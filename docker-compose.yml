@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: chamados-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: painel_next
+      POSTGRES_USER: painel_next
+      POSTGRES_PASSWORD: painel_next_secret_pwd
+      TZ: 'America/Sao_Paulo'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U painel_next -d painel_next" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: chamados-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+
+volumes:
+  pg_data:
