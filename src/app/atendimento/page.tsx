@@ -1258,19 +1258,19 @@ export default function AtendimentoPage() {
       {isFinishModalOpen && currentTicket && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 md:p-8 max-w-lg w-full space-y-5 animate-scale-in shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <span>Finalizar Atendimento</span>
                 </h3>
-                <span className="text-xs text-slate-400">
-                  Senha: <strong className="text-cyan-400 font-mono text-sm">{currentTicket.formattedTicket}</strong> {currentTicket.customerName ? `• ${currentTicket.customerName}` : ''}
+                <span className="text-xs text-slate-600 dark:text-slate-400">
+                  Senha: <strong className="text-cyan-700 dark:text-cyan-400 font-mono text-sm">{currentTicket.formattedTicket}</strong> {currentTicket.customerName ? `• ${currentTicket.customerName}` : ''}
                 </span>
               </div>
               <button
                 onClick={() => setIsFinishModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1279,7 +1279,7 @@ export default function AtendimentoPage() {
             <div className="space-y-4">
               {/* Seleção do Serviço */}
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400 block mb-1">
                   Serviço Realizado
                 </label>
                 <select
@@ -1322,11 +1322,11 @@ export default function AtendimentoPage() {
                     }}
                     className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1.5 transition-all ${
                       finishResolution === 'SOLVED'
-                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/20'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-300 border-2 border-emerald-500 shadow-md shadow-emerald-500/20'
+                        : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <Check className="w-4 h-4 text-emerald-400" />
+                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>Resolvido</span>
                   </button>
 
@@ -1335,11 +1335,11 @@ export default function AtendimentoPage() {
                     onClick={() => setFinishResolution('PENDING')}
                     className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1.5 transition-all ${
                       finishResolution === 'PENDING'
-                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-md shadow-amber-500/20'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300 border-2 border-amber-500 shadow-md shadow-amber-500/20'
+                        : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <Clock className="w-4 h-4 text-amber-400" />
+                    <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     <span>Pendente</span>
                   </button>
 
@@ -1351,11 +1351,11 @@ export default function AtendimentoPage() {
                     }}
                     className={`p-3 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1.5 transition-all ${
                       finishResolution === 'UNSOLVED'
-                        ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-md shadow-rose-500/20'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-rose-100 text-rose-900 dark:bg-rose-500/20 dark:text-rose-300 border-2 border-rose-500 shadow-md shadow-rose-500/20'
+                        : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <X className="w-4 h-4 text-rose-400" />
+                    <X className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                     <span>Não Resolvido</span>
                   </button>
                 </div>
@@ -1430,32 +1430,32 @@ export default function AtendimentoPage() {
       {isRedirectModalOpen && currentTicket && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 md:p-8 max-w-lg w-full space-y-5 animate-scale-in shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <ArrowRightLeft className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <ArrowRightLeft className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                   <span>Redirecionar Atendimento</span>
                 </h3>
-                <span className="text-xs text-slate-400">
-                  Senha Atual: <strong className="text-cyan-400 font-mono text-sm">{currentTicket.formattedTicket}</strong>
+                <span className="text-xs text-slate-600 dark:text-slate-400">
+                  Senha Atual: <strong className="text-cyan-700 dark:text-cyan-400 font-mono text-sm">{currentTicket.formattedTicket}</strong>
                 </span>
               </div>
               <button
                 onClick={() => setIsRedirectModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-800/60 text-indigo-200 text-xs">
+            <div className="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-900 dark:text-indigo-200 text-xs">
               Houve divergência na triagem? Ao redirecionar, uma <strong>nova senha será emitida</strong> com o serviço correto e a senha atual será arquivada como redirecionada.
             </div>
 
             <div className="space-y-4">
               {/* Novo Serviço de Destino */}
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400 block mb-1">
                   Novo Serviço de Destino
                 </label>
                 <select
