@@ -736,52 +736,60 @@ export default function AdminPage() {
   const selectedUnit = units.find((u) => u.id === selectedUnitId)
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8 admin-page-container transition-colors duration-200">
+    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8 admin-page-container transition-colors duration-200 relative overflow-hidden">
+      {/* Luzes de Fundo Ambientais */}
+      <div className="mesh-orb-cyan -top-24 -left-24 w-96 h-96 opacity-40 dark:opacity-30 pointer-events-none" />
+      <div className="mesh-orb-indigo top-1/2 -right-24 w-[450px] h-[450px] opacity-35 dark:opacity-20 pointer-events-none" />
+      <div className="mesh-orb-emerald -bottom-24 left-1/3 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none" />
+
       {/* Header do Painel de Administração */}
-      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 border-b border-slate-800 gap-4">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4 z-10">
         <div className="flex items-center space-x-4">
           <Link
             href="/"
-            className="h-11 w-11 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors flex items-center justify-center shrink-0"
+            className="h-11 w-11 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all flex items-center justify-center shrink-0 shadow-xs hover:scale-105"
             title="Voltar ao Hub"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              Painel de Administração <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">Gestão Global</span>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              Painel de Administração{' '}
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold shadow-xs">
+                Gestão Global
+              </span>
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Unidades, Brasões, Andares, Salas, Mesas/Guichês, Usuários e Voz Neural
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3 shrink-0">
+        <div className="flex items-center space-x-3 shrink-0 flex-wrap gap-y-2">
           {/* Unidade Selecionada no Header */}
           {selectedUnit && (
-            <div className="hidden lg:flex items-center h-11 space-x-3 px-3.5 rounded-2xl bg-slate-900/90 border border-slate-800">
+            <div className="hidden lg:flex items-center h-11 space-x-3 px-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 shadow-xs">
               {selectedUnit.logoUrl ? (
                 <img
                   src={selectedUnit.logoUrl}
                   alt="Brasão"
-                  className="w-7 h-7 object-contain rounded-lg bg-white/10 p-0.5 border border-slate-700/60"
+                  className="w-7 h-7 object-contain rounded-lg bg-white/10 p-0.5 border border-slate-300 dark:border-slate-700/60"
                 />
               ) : (
-                <div className="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center text-xs">
+                <div className="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 font-bold flex items-center justify-center text-xs">
                   {selectedUnit.code?.slice(0, 2) || 'UN'}
                 </div>
               )}
               <div className="text-left leading-tight">
                 <div className="flex items-center space-x-1.5">
-                  <span className="text-xs font-bold text-white block">{selectedUnit.name}</span>
-                  <span className="text-[10px] font-mono text-cyan-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white block">{selectedUnit.name}</span>
+                  <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 bg-slate-200/60 dark:bg-slate-950 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-800">
                     {selectedUnit.code}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2 mt-0.5">
-                  <span className="text-[11px] text-slate-400 block max-w-[150px] truncate">{selectedUnit.subtitle || 'Unidade'}</span>
-                  <span className="text-[10px] text-cyan-300 font-mono flex items-center gap-1 bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/40">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block max-w-[150px] truncate">{selectedUnit.subtitle || 'Unidade'}</span>
+                  <span className="text-[10px] text-cyan-700 dark:text-cyan-300 font-mono flex items-center gap-1 bg-cyan-500/10 px-1.5 py-0.2 rounded border border-cyan-500/25">
                     <Globe className="w-2.5 h-2.5" />
                     {selectedUnit.timezone || 'America/Sao_Paulo'}
                   </span>
@@ -795,17 +803,17 @@ export default function AdminPage() {
 
           {/* Administrador Logado */}
           {currentUser && (
-            <div className="flex items-center h-11 space-x-3 bg-slate-900/80 px-3.5 rounded-2xl border border-slate-800">
-              <div className="w-7 h-7 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-xs shrink-0">
+            <div className="flex items-center h-11 space-x-3 bg-slate-100 dark:bg-slate-900/80 px-3.5 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-xs">
+              <div className="w-7 h-7 rounded-full bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 flex items-center justify-center font-bold text-xs shrink-0">
                 {currentUser.name.charAt(0)}
               </div>
               <div className="text-left leading-tight">
-                <span className="text-xs font-bold text-white block truncate max-w-[120px]">{currentUser.name}</span>
-                <span className="text-[10px] text-cyan-400 font-mono">{currentUser.role}</span>
+                <span className="text-xs font-bold text-slate-900 dark:text-white block truncate max-w-[120px]">{currentUser.name}</span>
+                <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono">{currentUser.role}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors ml-1"
+                className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors ml-1"
                 title="Sair do Sistema"
               >
                 <LogOut className="w-4 h-4" />
@@ -818,10 +826,10 @@ export default function AdminPage() {
       {/* Alerta de Feedback */}
       {feedback && (
         <div
-          className={`mt-4 p-4 rounded-2xl border text-xs font-semibold flex items-center justify-between animate-fade-in ${
+          className={`mt-4 p-4 rounded-2xl border text-xs font-bold flex items-center justify-between animate-fade-in shadow-xs z-10 ${
             feedback.type === 'success'
-              ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
-              : 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+              ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-800 dark:text-emerald-300'
+              : 'bg-rose-500/15 border-rose-500/35 text-rose-800 dark:text-rose-300'
           }`}
         >
           <div className="flex items-center space-x-2">
@@ -832,14 +840,14 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Navegação por Abas */}
-      <div className="flex items-center space-x-2 my-6 border-b border-slate-800 pb-3 overflow-x-auto">
+      {/* Navegação por Abas com Estilo Elevado */}
+      <div className="flex items-center space-x-2 my-6 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto z-10">
         <button
           onClick={() => setActiveTab('UNITS')}
-          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-11 flex items-center space-x-2 px-4 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
             activeTab === 'UNITS'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent hover:border-slate-300 dark:hover:border-slate-800'
           }`}
         >
           <Building2 className="w-4 h-4" />
@@ -848,10 +856,10 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('STRUCTURE')}
-          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-11 flex items-center space-x-2 px-4 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
             activeTab === 'STRUCTURE'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent hover:border-slate-300 dark:hover:border-slate-800'
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -860,10 +868,10 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('LOCATIONS')}
-          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-11 flex items-center space-x-2 px-4 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
             activeTab === 'LOCATIONS'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent hover:border-slate-300 dark:hover:border-slate-800'
           }`}
         >
           <MapPin className="w-4 h-4" />
@@ -872,10 +880,10 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('SERVICES')}
-          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-11 flex items-center space-x-2 px-4 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
             activeTab === 'SERVICES'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent hover:border-slate-300 dark:hover:border-slate-800'
           }`}
         >
           <Briefcase className="w-4 h-4" />
@@ -884,10 +892,10 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('USERS')}
-          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-11 flex items-center space-x-2 px-4 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
             activeTab === 'USERS'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent hover:border-slate-300 dark:hover:border-slate-800'
           }`}
         >
           <Users className="w-4 h-4" />
@@ -896,10 +904,10 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('SPEECH')}
-          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-11 flex items-center space-x-2 px-4 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
             activeTab === 'SPEECH'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent hover:border-slate-300 dark:hover:border-slate-800'
           }`}
         >
           <Volume2 className="w-4 h-4" />
@@ -908,10 +916,10 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('ATTENDANCE')}
-          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-11 flex items-center space-x-2 px-4 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
             activeTab === 'ATTENDANCE'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent hover:border-slate-300 dark:hover:border-slate-800'
           }`}
         >
           <Shuffle className="w-4 h-4" />
@@ -1112,7 +1120,7 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="flex-1 py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/20"
+                  className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/25 btn-boom"
                 >
                   {editingUnitId ? 'Salvar Alterações' : 'Cadastrar Unidade'}
                 </button>
@@ -1261,7 +1269,7 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="w-full py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/25 btn-boom"
                 >
                   {editingFloorId ? 'Salvar Andar' : 'Cadastrar Andar'}
                 </button>
@@ -1339,7 +1347,7 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-500/25 btn-boom"
                 >
                   {editingRoomId ? 'Salvar Sala' : 'Cadastrar Sala'}
                 </button>
@@ -1517,7 +1525,7 @@ export default function AdminPage() {
               <button
                 type="submit"
                 disabled={isPending}
-                className="w-full py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/20"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/25 btn-boom"
               >
                 {editingLocationId ? 'Salvar Alterações' : 'Cadastrar Posto'}
               </button>
@@ -1792,7 +1800,7 @@ export default function AdminPage() {
               <button
                 type="submit"
                 disabled={isPending}
-                className="w-full py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/20"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/25 btn-boom"
               >
                 {editingServiceId ? 'Salvar Alterações' : 'Cadastrar Serviço'}
               </button>
@@ -1966,7 +1974,7 @@ export default function AdminPage() {
               <button
                 type="submit"
                 disabled={isPending}
-                className="w-full py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/20"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/25 btn-boom"
               >
                 {editingUserId ? 'Salvar Usuário' : 'Cadastrar Usuário'}
               </button>
@@ -2257,7 +2265,7 @@ export default function AdminPage() {
               <button
                 type="submit"
                 disabled={isPending}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-cyan-500/20 active:scale-[0.99]"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-cyan-500/25 active:scale-[0.99] btn-boom"
               >
                 Salvar Configurações de Voz da Unidade
               </button>
@@ -2383,7 +2391,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={handleTestSpeech}
                   disabled={isSimCalling}
-                  className="w-full py-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-md shadow-cyan-500/20 active:scale-[0.99] disabled:opacity-50"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-md shadow-cyan-500/25 active:scale-[0.99] disabled:opacity-50 btn-boom"
                 >
                   <Volume2 className="w-5 h-5" />
                   <span>{isSimCalling ? 'Reproduzindo Áudio...' : 'Ouvir Chamada com Chime + Voz'}</span>
@@ -2678,7 +2686,7 @@ export default function AdminPage() {
                   <button
                     type="submit"
                     disabled={isPending}
-                    className="w-full py-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/20 active:scale-[0.99] disabled:opacity-50 flex items-center justify-center space-x-2"
+                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-cyan-500/25 active:scale-[0.99] disabled:opacity-50 flex items-center justify-center space-x-2 btn-boom"
                   >
                     <CheckSquare className="w-4 h-4" />
                     <span>{isPending ? 'Salvando Configurações...' : 'Salvar Regras de Atendimento da Unidade'}</span>
@@ -2736,7 +2744,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={handleResetTicketCounter}
                   disabled={isPending || isResettingTickets}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-md shadow-amber-500/20 active:scale-[0.99] disabled:opacity-50"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-400 hover:to-red-400 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-md shadow-orange-500/25 active:scale-[0.99] disabled:opacity-50 btn-boom"
                 >
                   <RotateCcw className="w-4 h-4" />
                   <span>{isResettingTickets ? 'Resetando Contadores...' : 'Resetar Numeração Agora (Iniciar do 001)'}</span>
