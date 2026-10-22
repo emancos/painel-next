@@ -14,8 +14,14 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [unit, setUnit] = useState<{ name: string; subtitle?: string | null; logoUrl?: string | null } | null>(null)
+  const [redirectPath, setRedirectPath] = useState<string | null>(null)
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      setRedirectPath(params.get('redirect'))
+    }
+
     getUnitData()
       .then((data) => {
         if (data && data.unit) {
@@ -36,10 +42,22 @@ export default function LoginPage() {
     startTransition(async () => {
       const res = await loginAction(formData)
       if (res.success) {
-        if (res.user.role === 'ADMIN') {
-          router.push('/admin')
+        if (res.user.role === 'TRIAGE') {
+          // Operador de triagem só pode acessar o painel de triagem e o painel de chamados
+          if (redirectPath && (redirectPath.startsWith('/triagem') || redirectPath.startsWith('/painel'))) {
+            router.push(redirectPath)
+          } else {
+            router.push('/triagem')
+          }
+        } else if (res.user.role === 'ADMIN') {
+          router.push(redirectPath || '/admin')
         } else {
-          router.push('/atendimento')
+          // ATTENDANT
+          if (redirectPath && !redirectPath.startsWith('/admin')) {
+            router.push(redirectPath)
+          } else {
+            router.push('/atendimento')
+          }
         }
       } else {
         setErrorMsg(res.message || 'Credenciais inválidas.')
@@ -95,11 +113,22 @@ export default function LoginPage() {
             <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto mb-3">
               <Lock className="w-7 h-7" />
             </div>
-            <h2 className="text-2xl font-black text-white tracking-tight">Acesso ao Atendimento</h2>
+            <h2 className="text-2xl font-black text-white tracking-tight">
+              {redirectPath?.startsWith('/triagem') ? 'Acesso ao Posto de Triagem' : 'Acesso ao Atendimento'}
+            </h2>
             <p className="text-xs text-slate-400">
-              Faça login com seu e-mail e senha para iniciar seu posto de atendimento
+              {redirectPath?.startsWith('/triagem')
+                ? 'A página de triagem requer autenticação. Faça login com seu usuário ou operador de triagem.'
+                : 'Faça login com seu e-mail e senha para iniciar seu posto de atendimento'}
             </p>
           </div>
+
+          {redirectPath?.startsWith('/triagem') && (
+            <div className="p-3.5 rounded-2xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 text-xs font-semibold flex items-center gap-2 mb-4">
+              <ShieldCheck className="w-4 h-4 shrink-0 text-cyan-400" />
+              <span>Autenticação obrigatória para emissão de senhas e triagem.</span>
+            </div>
+          )}
 
           {errorMsg && (
             <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-600/50 text-rose-300 text-xs font-semibold flex items-center gap-2 mb-4">
@@ -158,7 +187,7 @@ export default function LoginPage() {
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
               Contas cadastradas para teste rápido:
             </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
               <button
                 type="button"
                 onClick={() => fillCredentials('emmanuelcdasilva@gmail.com', 'rakell17')}
@@ -175,6 +204,15 @@ export default function LoginPage() {
               >
                 <span className="font-bold text-emerald-300 block">Atendente</span>
                 <span className="text-[11px] text-slate-400 truncate block">atendente@painel...</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fillCredentials('triagem@painelnext.com', 'triagem123')}
+                className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500 text-left transition-colors"
+              >
+                <span className="font-bold text-amber-300 block">Op. Triagem</span>
+                <span className="text-[11px] text-slate-400 truncate block">triagem@painel...</span>
               </button>
             </div>
           </div>

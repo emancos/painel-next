@@ -138,11 +138,14 @@ export default function AtendimentoPage() {
     allowManualQueueSelection: true,
   })
 
-  // 1. Verifica autenticação do usuário
+  // 1. Verifica autenticação do usuário e permissão de acesso
   useEffect(() => {
     getSessionAction().then((u) => {
       if (!u) {
-        router.push('/login')
+        router.push('/login?redirect=/atendimento')
+      } else if (u.role === 'TRIAGE') {
+        // Usuários com perfil TRIAGE só podem acessar o painel de triagem e o painel de chamados
+        router.push('/triagem')
       } else {
         setCurrentUser(u)
       }

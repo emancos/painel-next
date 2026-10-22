@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { getUnitData, issueTicket } from '@/actions/tickets'
+import { getSessionAction, logoutAction } from '@/actions/auth'
 import {
   Ticket,
   Sparkles,
@@ -12,7 +14,12 @@ import {
   Layers,
   HelpCircle,
   CreditCard,
-  FileText
+  FileText,
+  LogOut,
+  Tv,
+  UserCheck,
+  ShieldCheck,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -43,6 +50,9 @@ interface IssuedTicketModalData {
 }
 
 export default function TriagemTotemPage() {
+  const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string } | null>(null)
+  const [isAuthChecking, setIsAuthChecking] = useState(true)
   const [unit, setUnit] = useState<{ id: string; name: string; subtitle?: string | null; logoUrl?: string | null } | null>(null)
   const [services, setServices] = useState<ServiceItem[]>([])
   const [priorities, setPriorities] = useState<PriorityItem[]>([])
@@ -53,6 +63,19 @@ export default function TriagemTotemPage() {
   const [isPending, startTransition] = useTransition()
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  // 1. Verifica autenticação obrigatória para acessar a triagem
+  useEffect(() => {
+    getSessionAction().then((u) => {
+      if (!u) {
+        router.push('/login?redirect=/triagem')
+      } else {
+        setCurrentUser(u)
+        setIsAuthChecking(false)
+      }
+    })
+  }, [router])
+
+  // 2. Carrega dados da unidade, serviços e prioridades
   useEffect(() => {
     getUnitData()
       .then((data) => {
@@ -66,6 +89,11 @@ export default function TriagemTotemPage() {
       })
       .catch((err) => console.error('Erro ao carregar dados da unidade:', err))
   }, [])
+
+  const handleLogout = async () => {
+    await logoutAction()
+    router.push('/login')
+  }
 
   const handleIssue = (service: ServiceItem, priority: PriorityItem) => {
     if (!unit) return
@@ -111,18 +139,44 @@ export default function TriagemTotemPage() {
     return <Layers className="w-8 h-8 text-cyan-400" />
   }
 
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col items-center justify-center p-6 space-y-4">
+        <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+        <p className="text-sm font-medium text-slate-400">Verificando autorização de acesso ao módulo de triagem...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col justify-between p-6 md:p-10">
-      {/* Topo do Totem com Identidade Institucional da Unidade */}
-      <header className="flex items-center justify-between pb-6 border-b border-slate-800">
+      {/* Topo do Totem com Identidade Institucional da Unidade e Identificação do Operador */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
         <div className="flex items-center space-x-4">
-          <Link
-            href="/"
-            className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
-            title="Voltar ao Início"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
+          {currentUser?.role === 'ADMIN' ? (
+            <Link
+              href="/admin"
+              className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+              title="Voltar ao Painel Administrativo"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+          ) : currentUser?.role === 'ATTENDANT' ? (
+            <Link
+              href="/atendimento"
+              className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+              title="Voltar ao Atendimento"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+          ) : (
+            <div
+              className="p-3 rounded-2xl bg-cyan-950/40 border border-cyan-800/40 text-cyan-400"
+              title="Posto de Triagem e Recepção Autorizado"
+            >
+              <Ticket className="w-5 h-5" />
+            </div>
+          )}
 
           {unit?.logoUrl ? (
             <img
@@ -151,9 +205,42 @@ export default function TriagemTotemPage() {
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center space-x-2 text-xs font-semibold text-slate-400 bg-slate-900/60 px-4 py-2 rounded-xl border border-slate-800">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
-          <span>Voz Neural & Alta Disponibilidade</span>
+        {/* Informações do Operador Autenticado e Ações Rápidas */}
+        <div className="flex items-center space-x-3 self-end md:self-auto">
+          {currentUser && (
+            <div className="text-right hidden sm:block bg-slate-900/60 px-3.5 py-2 rounded-2xl border border-slate-800">
+              <span className="text-xs font-bold text-white flex items-center justify-end gap-1.5">
+                <UserCheck className="w-3.5 h-3.5 text-cyan-400" />
+                {currentUser.name}
+              </span>
+              <span className="text-[10px] text-cyan-400 font-mono block">
+                {currentUser.role === 'TRIAGE' ? 'Operador de Triagem / Recepção' : currentUser.role}
+              </span>
+            </div>
+          )}
+
+          {/* Atalho para Painel de Chamadas TV */}
+          {unit?.id && (
+            <Link
+              href={`/painel/${unit.id}`}
+              target="_blank"
+              className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold transition-all shadow-sm"
+              title="Abrir Painel de Chamadas da TV"
+            >
+              <Tv className="w-4 h-4 text-cyan-400" />
+              <span className="hidden lg:inline">Painel TV</span>
+            </Link>
+          )}
+
+          {/* Botão Sair / Logout */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 text-xs font-bold transition-all shadow-sm"
+            title="Encerrar Sessão"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sair</span>
+          </button>
         </div>
       </header>
 
