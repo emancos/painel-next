@@ -255,6 +255,7 @@ export async function callNextTicket(params: {
         )
         .orderBy(asc(tickets.createdAt))
         .limit(1)
+        .for('update', { of: tickets, skipLocked: true })
 
       if (item) {
         nextItem = item
@@ -288,6 +289,7 @@ export async function callNextTicket(params: {
       )
       .orderBy(desc(priorities.weight), asc(tickets.createdAt))
       .limit(1)
+      .for('update', { of: tickets, skipLocked: true })
 
     const [item] = await query
     nextItem = item
@@ -311,7 +313,7 @@ export async function callNextTicket(params: {
 
   const calledAt = new Date()
 
-  // 3. Atualizar o status do ticket para CALLED
+  // 3. Atualizar o status do ticket para CALLED e definir broadcastStatus como WAITING
   const [updatedTicket] = await db
     .update(tickets)
     .set({
@@ -319,6 +321,7 @@ export async function callNextTicket(params: {
       locationId: params.locationId,
       userId: params.userId || null,
       calledAt,
+      metadata: sql`jsonb_set(COALESCE(${tickets.metadata}, '{}'::jsonb), '{broadcastStatus}', '"WAITING"'::jsonb)`,
     })
     .where(eq(tickets.id, nextItem.ticket.id))
     .returning()
@@ -431,6 +434,7 @@ export async function callSpecificTicket(params: {
       locationId: params.locationId,
       userId: params.userId || null,
       calledAt,
+      metadata: sql`jsonb_set(COALESCE(${tickets.metadata}, '{}'::jsonb), '{broadcastStatus}', '"WAITING"'::jsonb)`,
     })
     .where(eq(tickets.id, targetItem.ticket.id))
     .returning()
@@ -530,6 +534,13 @@ export async function recallTicket(ticketId: string, unitId: string) {
     },
     speech,
   }
+
+  await db
+    .update(tickets)
+    .set({
+      metadata: sql`jsonb_set(COALESCE(${tickets.metadata}, '{}'::jsonb), '{broadcastStatus}', '"WAITING"'::jsonb)`,
+    })
+    .where(eq(tickets.id, item.ticket.id))
 
   await publishPanelEvent(unitId, {
     type: 'TICKET_CALLED',

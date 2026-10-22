@@ -59,7 +59,13 @@ export function createRedisSubscriber(): Redis {
 }
 
 export interface PanelEvent<T = unknown> {
-  type: 'TICKET_CALLED' | 'TICKET_UPDATED' | 'TICKET_FINISHED' | 'CONFIG_CHANGED'
+  type:
+    | 'TICKET_CALLED'
+    | 'TICKET_UPDATED'
+    | 'TICKET_FINISHED'
+    | 'CONFIG_CHANGED'
+    | 'TICKET_PLAYING'
+    | 'TICKET_PLAYED'
   timestamp: string
   payload: T
 }

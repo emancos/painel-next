@@ -66,6 +66,29 @@ class SpeechQueueManager {
   }
 
   /**
+   * Executa diretamente o Chime e a Fala para uma senha e retorna uma Promise
+   * que resolve assim que o áudio for completamente finalizado.
+   */
+  public async playAnnouncement(item: { text: string; ssml?: string; voice?: string; rate?: string; pitch?: string }): Promise<void> {
+    try {
+      // 1. Toca o Chime
+      await this.playChime()
+
+      // 2. Tenta sintetizar via Edge-TTS (/api/tts)
+      const playedEdgeTts = await this.playEdgeTTS(item.text, item.voice, item.rate, item.pitch)
+
+      if (!playedEdgeTts) {
+        // 3. Fallback para Web Speech API nativa se o Edge-TTS falhar
+        console.warn('[Audio] Edge-TTS indisponível, acionando fallback Web Speech API.')
+        await this.playWebSpeech(item.text, item.voice, item.rate, item.pitch)
+      }
+    } catch (err) {
+      console.warn('[Audio] Erro ao reproduzir chamada, tentando fallback:', err)
+      await this.playWebSpeech(item.text, item.voice, item.rate, item.pitch)
+    }
+  }
+
+  /**
    * Enfileira uma mensagem de chamada e processa sequencialmente.
    */
   public enqueue(item: { text: string; ssml?: string; voice?: string; rate?: string; pitch?: string }) {

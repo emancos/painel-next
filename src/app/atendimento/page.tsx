@@ -43,7 +43,8 @@ import {
   Check,
   X,
   AlertTriangle,
-  Briefcase
+  Briefcase,
+  Volume2
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -78,6 +79,7 @@ interface CurrentTicketData {
   priorityColor: string
   locationName: string | null
   locationNumber: number | null
+  metadata?: Record<string, any> | null
 }
 
 interface EligibleServiceItem {
@@ -188,7 +190,55 @@ export default function AtendimentoPage() {
       bindAttendantToLocation(selectedLocationId, currentUser.id).catch(() => {})
       refreshQueue(unit.id, selectedLocationId, currentUser.id)
       const timer = setInterval(() => refreshQueue(unit.id, selectedLocationId, currentUser.id), 5000)
-      return () => clearInterval(timer)
+
+      // Conexão em tempo real via SSE para receber status de reprodução na TV e atualizações de fila
+      const eventSource = new EventSource(`/api/realtime/sse?unitId=${encodeURIComponent(unit.id)}`)
+
+      eventSource.onmessage = (event) => {
+        if (!event.data) return
+        try {
+          const parsed = JSON.parse(event.data)
+
+          if (parsed.type === 'TICKET_PLAYING') {
+            const { ticketId } = parsed.payload
+            setCurrentTicket((prev) => {
+              if (prev && prev.id === ticketId) {
+                return {
+                  ...prev,
+                  metadata: {
+                    ...((prev.metadata as any) || {}),
+                    broadcastStatus: 'PLAYING',
+                  },
+                }
+              }
+              return prev
+            })
+          } else if (parsed.type === 'TICKET_PLAYED') {
+            const { ticketId } = parsed.payload
+            setCurrentTicket((prev) => {
+              if (prev && prev.id === ticketId) {
+                return {
+                  ...prev,
+                  metadata: {
+                    ...((prev.metadata as any) || {}),
+                    broadcastStatus: 'PLAYED',
+                  },
+                }
+              }
+              return prev
+            })
+          } else if (parsed.type === 'TICKET_CALLED' || parsed.type === 'TICKET_FINISHED') {
+            refreshQueue(unit.id, selectedLocationId, currentUser.id)
+          }
+        } catch (err) {
+          console.warn('Erro ao processar SSE no painel do atendente:', err)
+        }
+      }
+
+      return () => {
+        clearInterval(timer)
+        eventSource.close()
+      }
     }
   }, [unit, selectedLocationId, currentUser])
 
@@ -556,18 +606,47 @@ export default function AtendimentoPage() {
           {/* Lado Esquerdo: Senha em Atendimento e Controles Principais (7 Colunas) */}
           <div className="lg:col-span-7 flex flex-col space-y-6">
             <div className="flex-1 rounded-3xl p-8 bg-slate-900/60 border border-slate-800 flex flex-col justify-between relative overflow-hidden">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Posto: <span className="text-cyan-400 font-mono text-sm">{selectedLocation ? `${selectedLocation.name} ${selectedLocation.number.toString().padStart(2, '0')}` : 'Guichê'}</span>
                 </span>
                 {currentTicket && (
-                  <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                    currentTicket.status === 'IN_PROGRESS' 
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
-                      : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  }`}>
-                    {currentTicket.status === 'IN_PROGRESS' ? 'Em Atendimento' : 'Chamado (Aguardando Cidadão)'}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Indicador de Reprodução na Tela da TV */}
+                    {(() => {
+                      const broadcastStatus = (currentTicket.metadata as any)?.broadcastStatus
+                      if (broadcastStatus === 'PLAYING') {
+                        return (
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 animate-pulse shadow-sm shadow-emerald-500/20">
+                            <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-bounce" />
+                            <span>Reproduzindo na TV</span>
+                          </span>
+                        )
+                      }
+                      if (broadcastStatus === 'PLAYED') {
+                        return (
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-cyan-950 text-cyan-300 border border-cyan-800/80 flex items-center gap-1.5">
+                            <CheckCircle className="w-3.5 h-3.5 text-cyan-400" />
+                            <span>Anunciada na TV</span>
+                          </span>
+                        )
+                      }
+                      return (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 animate-pulse">
+                          <Clock className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                          <span>Na fila da TV (Aguardando...)</span>
+                        </span>
+                      )
+                    })()}
+
+                    <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                      currentTicket.status === 'IN_PROGRESS' 
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+                        : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    }`}>
+                      {currentTicket.status === 'IN_PROGRESS' ? 'Em Atendimento' : 'Chamado (Aguardando)'}
+                    </span>
+                  </div>
                 )}
               </div>
 
@@ -590,6 +669,35 @@ export default function AtendimentoPage() {
                     <span className="px-3 py-1 rounded-full text-xs bg-slate-800 text-slate-300 border border-slate-700">
                       {currentTicket.serviceName}
                     </span>
+                  </div>
+
+                  {/* Banner de Status de Transmissão na TV */}
+                  <div className="pt-1">
+                    {(() => {
+                      const broadcastStatus = (currentTicket.metadata as any)?.broadcastStatus
+                      if (broadcastStatus === 'PLAYING') {
+                        return (
+                          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold shadow-md shadow-emerald-500/10 animate-pulse">
+                            <Volume2 className="w-4 h-4 text-emerald-400 animate-bounce" />
+                            <span>Esta senha está em exibição grande e sendo anunciada na TV neste momento.</span>
+                          </div>
+                        )
+                      }
+                      if (broadcastStatus === 'PLAYED') {
+                        return (
+                          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-slate-950/70 border border-slate-800 text-slate-300 text-xs font-medium">
+                            <CheckCircle className="w-4 h-4 text-cyan-400" />
+                            <span>Senha já exibida e anunciada na TV com sucesso.</span>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold animate-pulse">
+                          <Clock className="w-4 h-4 text-amber-400 animate-spin" />
+                          <span>Na fila da TV: aguardando outras chamadas concluírem o tempo de tela.</span>
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   {currentTicket.customerName && (

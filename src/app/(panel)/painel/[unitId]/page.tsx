@@ -37,7 +37,16 @@ export default function TVPanelPage({ params }: PanelPageProps) {
   const resolvedParams = use(params)
   const unitId = resolvedParams.unitId
 
+  interface QueuedCallItem {
+    ticket: FeaturedTicketData
+    speech: SseTicketPayload['speech']
+    ticketId: string
+  }
+
   const currentTicketRef = useRef<FeaturedTicketData | null>(null)
+  const displayQueueRef = useRef<QueuedCallItem[]>([])
+  const isDisplayingRef = useRef<boolean>(false)
+
   const [currentTicket, setCurrentTicket] = useState<FeaturedTicketData | null>(null)
   const [history, setHistory] = useState<HistoryTicketItem[]>([])
   const [isConnected, setIsConnected] = useState(false)
@@ -63,6 +72,106 @@ export default function TVPanelPage({ params }: PanelPageProps) {
     } else {
       document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {})
     }
+  }
+
+  // Processador sequencial da fila de chamadas com garantia de tempo de tela e áudio
+  const processNextCall = async () => {
+    if (displayQueueRef.current.length === 0) {
+      isDisplayingRef.current = false
+      return
+    }
+
+    isDisplayingRef.current = true
+    const item = displayQueueRef.current.shift()!
+    const newTicket = item.ticket
+    const prev = currentTicketRef.current
+
+    const isSameTicket = Boolean(
+      prev && (prev.id === newTicket.id || prev.formattedTicket === newTicket.formattedTicket)
+    )
+
+    // 1. Atualiza a referência e o estado do ticket principal em destaque
+    currentTicketRef.current = newTicket
+    setCurrentTicket(newTicket)
+
+    // 2. Atualiza o histórico lateral
+    setHistory((prevHistory) => {
+      if (isSameTicket) {
+        return prevHistory
+          .filter(
+            (h) => h.id !== newTicket.id && h.formattedTicket !== newTicket.formattedTicket
+          )
+          .slice(0, 5)
+      }
+
+      const filtered = prevHistory.filter(
+        (h) =>
+          h.id !== newTicket.id &&
+          h.formattedTicket !== newTicket.formattedTicket &&
+          (!prev || (h.id !== prev.id && h.formattedTicket !== prev.formattedTicket))
+      )
+
+      if (prev) {
+        const retiredTicket: HistoryTicketItem = {
+          id: prev.id,
+          formattedTicket: prev.formattedTicket,
+          serviceName: prev.serviceName,
+          priorityName: prev.priorityName,
+          priorityColor: prev.priorityColor,
+          locationFormatted: prev.locationFormatted,
+          calledAt: new Date(),
+        }
+        return [retiredTicket, ...filtered].slice(0, 5)
+      }
+
+      return filtered.slice(0, 5)
+    })
+
+    // 3. Ativa efeito de flash na tela
+    setIsFlashing(true)
+
+    // 4. Notifica o backend e os atendentes que esta senha está SENDO REPRODUZIDA NA TELA AGORA
+    fetch('/api/panel/ticket-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        unitId,
+        ticketId: item.ticketId,
+        status: 'PLAYING',
+        queueLength: displayQueueRef.current.length,
+      }),
+    }).catch((err) => console.warn('Aviso ao notificar PLAYING:', err))
+
+    // 5. Toca o gongo e sintetiza a voz, garantindo tempo mínimo na tela de 6.5s
+    const audioPromise = speechManager.playAnnouncement({
+      text: item.speech.plainText,
+      voice: item.speech.voice,
+      rate: item.speech.rate,
+      pitch: item.speech.pitch,
+    })
+
+    const minDisplayPromise = new Promise((resolve) => setTimeout(resolve, 6500))
+
+    await Promise.all([audioPromise, minDisplayPromise])
+
+    setIsFlashing(false)
+
+    // 6. Notifica o backend e os atendentes que esta senha FOI REPRODUZIDA NA TELA
+    fetch('/api/panel/ticket-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        unitId,
+        ticketId: item.ticketId,
+        status: 'PLAYED',
+        queueLength: displayQueueRef.current.length,
+      }),
+    }).catch((err) => console.warn('Aviso ao notificar PLAYED:', err))
+
+    // 7. Pausa curta antes de passar para a próxima senha da fila (se houver)
+    setTimeout(() => {
+      processNextCall()
+    }, 400)
   }
 
   // Carregar dados iniciais e conectar ao SSE em tempo real
@@ -131,72 +240,17 @@ export default function TVPanelPage({ params }: PanelPageProps) {
             locationShort: payload.ticket.locationShort,
           }
 
-          const prev = currentTicketRef.current
-
-          // Verifica se é a mesma senha que já está na tela principal (rechamada)
-          const isSameTicket = Boolean(
-            prev &&
-              (prev.id === newTicket.id ||
-                prev.formattedTicket === newTicket.formattedTicket)
-          )
-
-          // Atualiza a referência e o estado do ticket principal em destaque
-          currentTicketRef.current = newTicket
-          setCurrentTicket(newTicket)
-
-          // Atualiza o histórico de forma atômica e pura, garantindo que não haja multiplicações
-          setHistory((prevHistory) => {
-            // Se for rechamada da mesma senha, NÃO empurra para o histórico
-            if (isSameTicket) {
-              return prevHistory
-                .filter(
-                  (item) =>
-                    item.id !== newTicket.id &&
-                    item.formattedTicket !== newTicket.formattedTicket
-                )
-                .slice(0, 5)
-            }
-
-            // Se for uma nova senha:
-            // 1. Remove qualquer duplicata da nova senha ou do ticket anterior
-            const filtered = prevHistory.filter((item) => {
-              if (item.id === newTicket.id || item.formattedTicket === newTicket.formattedTicket) {
-                return false
-              }
-              if (prev && (item.id === prev.id || item.formattedTicket === prev.formattedTicket)) {
-                return false
-              }
-              return true
-            })
-
-            // 2. Se existia uma senha anterior em exibição no destaque, ela desce para as últimas chamadas
-            if (prev) {
-              const retiredTicket: HistoryTicketItem = {
-                id: prev.id,
-                formattedTicket: prev.formattedTicket,
-                serviceName: prev.serviceName,
-                priorityName: prev.priorityName,
-                priorityColor: prev.priorityColor,
-                locationFormatted: prev.locationFormatted,
-                calledAt: new Date(),
-              }
-              return [retiredTicket, ...filtered].slice(0, 5)
-            }
-
-            return filtered.slice(0, 5)
+          // Enfileira a nova chamada garantindo que ela não atropela a que está na tela
+          displayQueueRef.current.push({
+            ticket: newTicket,
+            speech: payload.speech,
+            ticketId: payload.ticket.id,
           })
 
-          // Efeito de flash na tela
-          setIsFlashing(true)
-          setTimeout(() => setIsFlashing(false), 3600)
-
-          // Síntese de voz com Edge-TTS e Chime
-          speechManager.enqueue({
-            text: payload.speech.plainText,
-            voice: payload.speech.voice,
-            rate: payload.speech.rate,
-            pitch: payload.speech.pitch,
-          })
+          // Se a tela não estiver ocupada reproduzindo outra senha, inicia imediatamente
+          if (!isDisplayingRef.current) {
+            processNextCall()
+          }
         }
       } catch (err) {
         console.warn('Erro ao processar mensagem do SSE:', err)
@@ -206,6 +260,8 @@ export default function TVPanelPage({ params }: PanelPageProps) {
     return () => {
       isMounted = false
       eventSource.close()
+      displayQueueRef.current = []
+      isDisplayingRef.current = false
     }
   }, [unitId])
 
