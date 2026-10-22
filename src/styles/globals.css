@@ -22,6 +22,194 @@ body {
   user-select: none;
 }
 
+/* ========================================================
+   CONTEXTO 2: TEMA CLARO PARA SISTEMA ADMINISTRATIVO
+   ======================================================== */
+[data-admin-theme='light'] body,
+[data-admin-theme='light'] .admin-page-container {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Apenas o header raiz (landing page) possui fundo de navbar fixo */
+[data-admin-theme='light'] .admin-root-header,
+[data-admin-theme='light'] header[data-navbar='root'] {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Headers internos (atendimento, admin, triagem) permanecem abertos e transparentes, harmoniosos como no tema escuro */
+[data-admin-theme='light'] .admin-page-container header:not([data-navbar='root']) {
+  background: transparent !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: none !important;
+}
+
+/* Transforma todos os cards e containers escuros em cartões brancos com contraste premium */
+[data-admin-theme='light'] .admin-page-container [class*='bg-slate-900'],
+[data-admin-theme='light'] .admin-page-container [class*='bg-[#090D16]'],
+[data-admin-theme='light'] .admin-page-container [class*='bg-[#0D1829]'],
+[data-admin-theme='light'] .admin-page-container [class*='from-slate-900'],
+[data-admin-theme='light'] .admin-page-container [class*='via-[#0D1829]'],
+[data-admin-theme='light'] .admin-page-container [class*='to-slate-900'],
+[data-admin-theme='light'] .admin-page-container .bg-gradient-to-r {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Sub-containers internos, caixas aninhadas e fundos de tabela (bg-slate-950) ganham fundo slate suave para profundidade */
+[data-admin-theme='light'] .admin-page-container [class*='bg-slate-950'] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Bordas suaves nos cards */
+[data-admin-theme='light'] .admin-page-container [class*='border-slate-800'],
+[data-admin-theme='light'] .admin-page-container [class*='border-slate-700'] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Sombras nos cards para profundidade visual no tema claro */
+[data-admin-theme='light'] .admin-page-container .rounded-3xl,
+[data-admin-theme='light'] .admin-page-container .rounded-2xl {
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+}
+
+/* Remover borrões escuros em modo claro */
+[data-admin-theme='light'] .admin-page-container .blur-3xl {
+  opacity: 0.05 !important;
+}
+
+/* Textos com contraste perfeito */
+[data-admin-theme='light'] .admin-page-container h1,
+[data-admin-theme='light'] .admin-page-container h2,
+[data-admin-theme='light'] .admin-page-container h3,
+[data-admin-theme='light'] .admin-page-container h4,
+[data-admin-theme='light'] .admin-page-container .text-white {
+  color: #0f172a !important;
+}
+
+[data-admin-theme='light'] .admin-page-container .text-slate-100,
+[data-admin-theme='light'] .admin-page-container .text-slate-200,
+[data-admin-theme='light'] .admin-page-container .text-slate-300 {
+  color: #334155 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Ajuste de tons fluorescentes para melhor legibilidade no tema claro */
+[data-admin-theme='light'] .admin-page-container .text-cyan-400 {
+  color: #0891b2 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container .text-emerald-400 {
+  color: #059669 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container .text-amber-400 {
+  color: #d97706 !important;
+}
+
+/* Badges e tags em modo claro com alto contraste */
+[data-admin-theme='light'] .admin-page-container [class*='bg-emerald-950'],
+[data-admin-theme='light'] .admin-page-container [class*='bg-emerald-500/10'] {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #065f46 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container [class*='bg-cyan-950'],
+[data-admin-theme='light'] .admin-page-container [class*='bg-cyan-500/10'] {
+  background-color: #ecfeff !important;
+  border-color: #a5f3fc !important;
+  color: #0e7490 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container [class*='bg-indigo-950'],
+[data-admin-theme='light'] .admin-page-container [class*='bg-indigo-500/10'] {
+  background-color: #eef2ff !important;
+  border-color: #c7d2fe !important;
+  color: #4338ca !important;
+}
+
+[data-admin-theme='light'] .admin-page-container [class*='bg-rose-950'],
+[data-admin-theme='light'] .admin-page-container [class*='bg-rose-500/10'] {
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 !important;
+  color: #be123c !important;
+}
+
+[data-admin-theme='light'] .admin-page-container [class*='bg-amber-950'],
+[data-admin-theme='light'] .admin-page-container [class*='bg-amber-500/10'],
+[data-admin-theme='light'] .admin-page-container [class*='bg-amber-500/15'] {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+  color: #b45309 !important;
+}
+
+/* Botões com bg-slate-800 e bg-slate-900 em tema claro */
+[data-admin-theme='light'] .admin-page-container button[class*='bg-slate-800'],
+[data-admin-theme='light'] .admin-page-container a[class*='bg-slate-800'],
+[data-admin-theme='light'] .admin-page-container [class*='bg-slate-800']:not(.text-slate-950) {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+[data-admin-theme='light'] .admin-page-container button[class*='bg-slate-800']:hover,
+[data-admin-theme='light'] .admin-page-container a[class*='bg-slate-800']:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+[data-admin-theme='light'] .admin-page-container button[class*='bg-slate-900']:not(.text-slate-950),
+[data-admin-theme='light'] .admin-page-container a[class*='bg-slate-900']:not(.text-slate-950) {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+[data-admin-theme='light'] .admin-page-container button[class*='bg-slate-900']:hover,
+[data-admin-theme='light'] .admin-page-container a[class*='bg-slate-900']:hover {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Inputs, selects e textareas */
+[data-admin-theme='light'] .admin-page-container input:not([type='checkbox']):not([type='radio']),
+[data-admin-theme='light'] .admin-page-container select,
+[data-admin-theme='light'] .admin-page-container textarea {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+[data-admin-theme='light'] .admin-page-container input::placeholder,
+[data-admin-theme='light'] .admin-page-container textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Botões inativos de abas e navegação */
+[data-admin-theme='light'] .admin-page-container .border-b.border-slate-800 {
+  border-color: #e2e8f0 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container button.text-slate-400 {
+  color: #64748b !important;
+}
+
+[data-admin-theme='light'] .admin-page-container button.text-slate-400:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
 /* Glassmorphism helpers */
 .glass-panel {
   background: var(--card-bg);
