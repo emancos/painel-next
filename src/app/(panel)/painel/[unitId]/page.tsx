@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, use, useCallback } from 'react'
+import Link from 'next/link'
 import { FeaturedTicket, FeaturedTicketData } from '@/components/panel/FeaturedTicket'
 import { TicketHistory, HistoryTicketItem } from '@/components/panel/TicketHistory'
 import { DigitalClock } from '@/components/panel/DigitalClock'
@@ -13,22 +14,11 @@ import {
   Radio,
   ShieldCheck,
   SlidersHorizontal,
-  X,
-  Check,
-  Copy,
-  CheckCheck,
-  Tv,
   Filter,
 } from 'lucide-react'
 
 interface PanelPageProps {
   params: Promise<{ unitId: string }>
-}
-
-interface ServiceOption {
-  id: string
-  name: string
-  prefix: string
 }
 
 interface SseTicketPayload {
@@ -82,13 +72,10 @@ export default function TVPanelPage({ params }: PanelPageProps) {
   const [unitLogoUrl, setUnitLogoUrl] = useState<string | null>(null)
   const [unitTimezone, setUnitTimezone] = useState<string>('America/Sao_Paulo')
 
-  // Estado de serviços e filtro por tela (setor)
-  const [allServices, setAllServices] = useState<ServiceOption[]>([])
+  // Configurações da tela: Tema (Padrão: Claro) e Layout (Padrão: classic)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [layout, setLayout] = useState<'classic' | 'widescreen' | 'compact'>('classic')
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [tempFilterMode, setTempFilterMode] = useState<'ALL' | 'SPECIFIC'>('ALL')
-  const [tempSelectedIds, setTempSelectedIds] = useState<string[]>([])
-  const [copiedUrl, setCopiedUrl] = useState(false)
 
   // Desbloqueio e ativação do áudio (exigido por navegadores modernos)
   const handleEnableAudio = () => {
@@ -105,6 +92,16 @@ export default function TVPanelPage({ params }: PanelPageProps) {
       document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {})
     }
   }
+
+  // Monitora alterações de tela cheia (tanto pelo botão quanto por tecla F11 do teclado)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement))
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
 
   // Carrega dados iniciais da unidade e histórico filtrado
   const loadPanelData = useCallback(async (filterIds: string[]) => {
@@ -123,9 +120,6 @@ export default function TVPanelPage({ params }: PanelPageProps) {
       if (data.unit?.subtitle) setUnitSubtitle(data.unit.subtitle)
       if (data.unit?.logoUrl) setUnitLogoUrl(data.unit.logoUrl)
       if (data.unit?.timezone) setUnitTimezone(data.unit.timezone)
-      if (data.allServices && Array.isArray(data.allServices)) {
-        setAllServices(data.allServices)
-      }
 
       currentTicketRef.current = data.currentTicket || null
       setCurrentTicket(data.currentTicket || null)
@@ -253,16 +247,56 @@ export default function TVPanelPage({ params }: PanelPageProps) {
     }, 400)
   }
 
-  // Inicialização do filtro por localStorage ou URL e conexão SSE
+  // Inicialização do painel: tema, layout, filtros e SSE
   useEffect(() => {
     let isMounted = true
 
-    // Recupera filtro configurado na URL ou no localStorage desta tela
-    let initialFilter: string[] = []
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
-      const urlServices = urlParams.get('services')
 
+      // 1. Tema do painel (Padrão: Claro)
+      const urlTheme = urlParams.get('theme')
+      if (urlTheme === 'dark' || urlTheme === 'light') {
+        setTheme(urlTheme)
+        try {
+          localStorage.setItem(`panel_theme_${unitId}`, urlTheme)
+        } catch (e) {}
+      } else {
+        try {
+          const storedTheme = localStorage.getItem(`panel_theme_${unitId}`)
+          if (storedTheme === 'dark' || storedTheme === 'light') {
+            setTheme(storedTheme)
+          } else {
+            setTheme('light') // Padrão da TV: Tema Claro
+          }
+        } catch (e) {
+          setTheme('light')
+        }
+      }
+
+      // 2. Layout do painel (Padrão: classic)
+      const urlLayout = urlParams.get('layout')
+      if (urlLayout === 'classic' || urlLayout === 'widescreen' || urlLayout === 'compact') {
+        setLayout(urlLayout)
+        try {
+          localStorage.setItem(`panel_layout_${unitId}`, urlLayout)
+        } catch (e) {}
+      } else {
+        try {
+          const storedLayout = localStorage.getItem(`panel_layout_${unitId}`)
+          if (storedLayout === 'classic' || storedLayout === 'widescreen' || storedLayout === 'compact') {
+            setLayout(storedLayout)
+          } else {
+            setLayout('classic')
+          }
+        } catch (e) {
+          setLayout('classic')
+        }
+      }
+
+      // 3. Filtro de serviços / setores
+      let initialFilter: string[] = []
+      const urlServices = urlParams.get('services')
       if (urlServices) {
         initialFilter = urlServices
           .split(',')
@@ -282,13 +316,13 @@ export default function TVPanelPage({ params }: PanelPageProps) {
           }
         } catch (e) {}
       }
+
+      selectedServiceIdsRef.current = initialFilter
+      setSelectedServiceIds(initialFilter)
+
+      // Carrega dados iniciais com o filtro ativo
+      loadPanelData(initialFilter)
     }
-
-    selectedServiceIdsRef.current = initialFilter
-    setSelectedServiceIds(initialFilter)
-
-    // Carrega dados iniciais com o filtro ativo
-    loadPanelData(initialFilter)
 
     // Conectar ao Server-Sent Events (SSE)
     const eventSource = new EventSource(`/api/realtime/sse?unitId=${encodeURIComponent(unitId)}`)
@@ -311,7 +345,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
           const payload = parsed.payload as SseTicketPayload
 
           // FILTRO POR TELA/SETOR: se esta tela foi configurada para serviços específicos,
-          // ignorar completamente chamadas de serviços que não foram selecionados para esta tela.
+          // ignorar chamadas de serviços que não foram selecionados para esta tela.
           const activeFilter = selectedServiceIdsRef.current
           if (
             activeFilter.length > 0 &&
@@ -359,86 +393,52 @@ export default function TVPanelPage({ params }: PanelPageProps) {
     }
   }, [unitId, loadPanelData])
 
-  // Abrir modal de configurações
-  const handleOpenSettings = () => {
-    setTempFilterMode(selectedServiceIds.length > 0 ? 'SPECIFIC' : 'ALL')
-    setTempSelectedIds([...selectedServiceIds])
-    setCopiedUrl(false)
-    setIsSettingsOpen(true)
-  }
-
-  // Alternar checkbox de um serviço no modal
-  const handleToggleService = (serviceId: string) => {
-    setTempSelectedIds((prev) =>
-      prev.includes(serviceId) ? prev.filter((id) => id !== serviceId) : [...prev, serviceId]
-    )
-  }
-
-  // Salvar configuração na instância local desta tela
-  const handleSaveSettings = () => {
-    const finalFilter = tempFilterMode === 'SPECIFIC' ? tempSelectedIds : []
-
-    setSelectedServiceIds(finalFilter)
-    selectedServiceIdsRef.current = finalFilter
-
-    try {
-      if (finalFilter.length > 0) {
-        localStorage.setItem(`panel_services_${unitId}`, JSON.stringify(finalFilter))
-      } else {
-        localStorage.removeItem(`panel_services_${unitId}`)
-      }
-    } catch (e) {}
-
-    // Recarrega os dados do painel para exibir apenas as senhas do setor selecionado
-    loadPanelData(finalFilter)
-    setIsSettingsOpen(false)
-  }
-
-  // Gera o link para Smart TV / Kiosk com o filtro configurado
-  const getKioskUrl = () => {
-    if (typeof window === 'undefined') return ''
-    const base = `${window.location.origin}/painel/${unitId}`
-    if (tempFilterMode === 'SPECIFIC' && tempSelectedIds.length > 0) {
-      return `${base}?services=${tempSelectedIds.join(',')}`
-    }
-    return base
-  }
-
-  const handleCopyKioskUrl = () => {
-    const url = getKioskUrl()
-    if (!url) return
-    navigator.clipboard.writeText(url).then(() => {
-      setCopiedUrl(true)
-      setTimeout(() => setCopiedUrl(false), 2500)
-    })
-  }
+  const isLight = theme === 'light'
 
   return (
-    <main className="min-h-screen flex flex-col p-6 md:p-8 justify-between relative bg-gradient-to-b from-[#090D16] via-[#0B132B] to-[#090D16]">
+    <main
+      className={`min-h-screen flex flex-col p-5 md:p-8 justify-between relative transition-colors duration-300 ${
+        isLight
+          ? 'bg-gradient-to-b from-slate-100 via-slate-50 to-slate-200 text-slate-800'
+          : 'bg-gradient-to-b from-[#090D16] via-[#0B132B] to-[#090D16] text-white'
+      }`}
+    >
       {/* Barra Superior / Header */}
-      <header className="flex items-center justify-between pb-6 mb-4 border-b border-slate-800/80">
+      <header
+        className={`flex items-center justify-between pb-5 mb-3 border-b transition-colors duration-300 ${
+          isLight ? 'border-slate-300/80 bg-white/70 backdrop-blur-md rounded-2xl p-4 shadow-xs' : 'border-slate-800/80'
+        }`}
+      >
         <div className="flex items-center space-x-4">
           {unitLogoUrl ? (
             <img
               src={unitLogoUrl}
               alt="Brasão da Unidade"
-              className="w-14 h-14 object-contain rounded-2xl bg-white/5 border border-white/10 p-1.5"
+              className={`w-14 h-14 object-contain rounded-2xl p-1.5 border ${
+                isLight ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/10'
+              }`}
             />
           ) : (
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+            <div
+              className={`w-12 h-12 rounded-2xl border flex items-center justify-center ${
+                isLight ? 'bg-cyan-100 border-cyan-300 text-cyan-700' : 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400'
+              }`}
+            >
               <Radio className="w-6 h-6 animate-pulse" />
             </div>
           )}
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-xl md:text-2xl font-black tracking-wide text-white">
+              <h1 className={`text-xl md:text-2xl font-black tracking-wide ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 {unitName}
               </h1>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                   isConnected
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                    ? isLight
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                    : 'bg-amber-500/20 text-amber-500 border border-amber-500/40'
                 }`}
               >
                 {isConnected ? 'AO VIVO' : 'CONECTANDO...'}
@@ -446,308 +446,119 @@ export default function TVPanelPage({ params }: PanelPageProps) {
 
               {/* Indicador de Setor / Filtro desta Tela */}
               {selectedServiceIds.length > 0 ? (
-                <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                <span
+                  className={`hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                    isLight
+                      ? 'bg-cyan-100 text-cyan-800 border-cyan-300'
+                      : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                  }`}
+                >
                   <Filter className="w-3 h-3 mr-1" />
                   Setor ({selectedServiceIds.length} serviço{selectedServiceIds.length > 1 ? 's' : ''})
                 </span>
-              ) : (
-                <span className="hidden lg:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800/80 text-slate-400 border border-slate-700/60">
-                  Todos os Serviços
-                </span>
-              )}
+              ) : null}
             </div>
-            <p className="text-xs text-slate-400 font-medium tracking-wide">
+            <p className={`text-xs font-medium tracking-wide ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
               {unitSubtitle || 'Painel de Atendimento em Tempo Real'}
             </p>
           </div>
         </div>
 
-        {/* Controles: Áudio, Configurar Tela, Fullscreen e Relógio Digital */}
+        {/* Controles: Áudio, Configurações, Fullscreen e Relógio Digital */}
         <div className="flex items-center space-x-3 md:space-x-4">
-          {/* Botão de Áudio */}
-          <button
-            onClick={handleEnableAudio}
-            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${
-              audioEnabled
-                ? 'bg-slate-800/80 text-cyan-400 border border-cyan-500/30'
-                : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold animate-bounce'
-            }`}
-            title={audioEnabled ? 'Áudio ativado' : 'Clique para ativar a chamada por voz'}
-          >
-            {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            <span className="hidden md:inline">{audioEnabled ? 'Voz Ativa' : 'Ativar Voz'}</span>
-          </button>
+          {/* REQUISITO 3: Quando em tela cheia (F11 ou botão pressionado), ocultar Voz Ativa, Configurações e Fullscreen */}
+          {!isFullscreen && (
+            <>
+              {/* Botão de Áudio (Voz Ativa) */}
+              <button
+                onClick={handleEnableAudio}
+                className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${
+                  audioEnabled
+                    ? isLight
+                      ? 'bg-cyan-100 text-cyan-800 border border-cyan-300'
+                      : 'bg-slate-800/80 text-cyan-400 border border-cyan-500/30'
+                    : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold animate-bounce'
+                }`}
+                title={audioEnabled ? 'Áudio ativado' : 'Clique para ativar a chamada por voz'}
+              >
+                {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                <span className="hidden md:inline">{audioEnabled ? 'Voz Ativa' : 'Ativar Voz'}</span>
+              </button>
 
-          {/* Botão de Configuração de Serviços desta Tela */}
-          <button
-            onClick={handleOpenSettings}
-            className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all border ${
-              selectedServiceIds.length > 0
-                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30'
-                : 'bg-slate-800/80 text-slate-300 hover:text-white border-slate-700/80 hover:bg-slate-700/60'
-            }`}
-            title="Configurar quais serviços/setor esta tela irá chamar"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">Setor</span>
-          </button>
+              {/* REQUISITO 1: Botão alterado de "Setor" para "Configurações" */}
+              <Link
+                href={`/painel/${unitId}/config`}
+                className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                  isLight
+                    ? 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300 shadow-xs hover:text-slate-900'
+                    : 'bg-slate-800/80 text-slate-300 hover:text-white border-slate-700/80 hover:bg-slate-700/60'
+                }`}
+                title="Configurações desta tela (Tema, Layout e Setores)"
+              >
+                <SlidersHorizontal className={`w-4 h-4 ${isLight ? 'text-cyan-600' : 'text-cyan-400'}`} />
+                <span className="hidden sm:inline">Configurações</span>
+              </Link>
 
-          {/* Botão Tela Cheia */}
-          <button
-            onClick={toggleFullscreen}
-            className="p-2.5 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-slate-700/80 transition-colors"
-            title="Alternar Tela Cheia"
-          >
-            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-          </button>
+              {/* Botão Tela Cheia */}
+              <button
+                onClick={toggleFullscreen}
+                className={`p-2.5 rounded-xl border transition-colors ${
+                  isLight
+                    ? 'bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-300'
+                    : 'bg-slate-800/80 text-slate-300 hover:text-white border-slate-700/80'
+                }`}
+                title="Alternar Tela Cheia"
+              >
+                {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              </button>
+            </>
+          )}
 
-          {/* Relógio Digital com Timezone */}
-          <DigitalClock timezone={unitTimezone} />
+          {/* Relógio Digital com Timezone e Tema */}
+          <DigitalClock timezone={unitTimezone} theme={theme} />
         </div>
       </header>
 
-      {/* Área Central: Senha em Destaque + Histórico Lateral */}
-      <section className="flex-1 flex flex-col lg:flex-row gap-6 my-2">
-        <FeaturedTicket ticket={currentTicket} isFlashing={isFlashing} />
-        <TicketHistory history={history} />
-      </section>
+      {/* REQUISITO 2: Área Central com os 3 Layouts Disponíveis */}
+      {layout === 'widescreen' ? (
+        /* LAYOUT 2: Widescreen Horizontal (Senha no Topo + Histórico em Grade Inferior) */
+        <section className="flex-1 flex flex-col gap-5 my-2">
+          <FeaturedTicket ticket={currentTicket} isFlashing={isFlashing} theme={theme} variant="widescreen" />
+          <TicketHistory history={history} theme={theme} variant="widescreen" />
+        </section>
+      ) : layout === 'compact' ? (
+        /* LAYOUT 3: Foco Dividido / Chamada Dupla */
+        <section className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 my-2 items-stretch">
+          <div className="lg:col-span-7 flex flex-col">
+            <FeaturedTicket ticket={currentTicket} isFlashing={isFlashing} theme={theme} variant="compact" />
+          </div>
+          <div className="lg:col-span-5 flex flex-col">
+            <TicketHistory history={history} theme={theme} variant="compact" />
+          </div>
+        </section>
+      ) : (
+        /* LAYOUT 1 (Padrão): Destaque Lateral Clássico */
+        <section className="flex-1 flex flex-col lg:flex-row gap-6 my-2">
+          <FeaturedTicket ticket={currentTicket} isFlashing={isFlashing} theme={theme} variant="classic" />
+          <TicketHistory history={history} theme={theme} variant="classic" />
+        </section>
+      )}
 
       {/* Rodapé Institucional / Marquee Informativo */}
-      <footer className="mt-4 pt-4 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
+      <footer
+        className={`mt-4 pt-4 border-t flex items-center justify-between text-xs transition-colors duration-300 ${
+          isLight ? 'border-slate-300/80 text-slate-600' : 'border-slate-800/60 text-slate-400'
+        }`}
+      >
         <div className="flex items-center space-x-2">
-          <ShieldCheck className="w-4 h-4 text-cyan-400" />
+          <ShieldCheck className={`w-4 h-4 ${isLight ? 'text-cyan-600' : 'text-cyan-400'}`} />
           <span>Atendimento conforme Lei Federal nº 10.048/2000 (Prioridades)</span>
         </div>
 
-        <div className="hidden md:block overflow-hidden max-w-xl text-slate-500 text-right">
+        <div className={`hidden md:block overflow-hidden max-w-xl text-right ${isLight ? 'text-slate-600' : 'text-slate-500'}`}>
           <span>Ao ouvir sua senha, dirija-se com seus documentos ao guichê informado.</span>
         </div>
       </footer>
-
-      {/* Modal de Configuração de Serviços desta Tela (Instância) */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Header do Modal */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
-                  <Tv className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white">Configurar Esta Tela</h2>
-                  <p className="text-xs text-slate-400">
-                    Defina quais senhas e serviços serão chamados nesta TV
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Conteúdo do Modal */}
-            <div className="p-6 overflow-y-auto space-y-5 flex-1">
-              {/* Seleção do Modo de Operação */}
-              <div className="space-y-3">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Modo de Operação
-                </label>
-                <div className="grid grid-cols-1 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setTempFilterMode('ALL')}
-                    className={`flex items-start p-3.5 rounded-xl border text-left transition-all ${
-                      tempFilterMode === 'ALL'
-                        ? 'bg-cyan-500/15 border-cyan-500 text-white'
-                        : 'bg-slate-800/40 border-slate-700/60 text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center h-5 mr-3">
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          tempFilterMode === 'ALL'
-                            ? 'border-cyan-400 bg-cyan-500'
-                            : 'border-slate-500 bg-transparent'
-                        }`}
-                      >
-                        {tempFilterMode === 'ALL' && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm text-white">
-                        Todos os Serviços da Unidade (Geral)
-                      </div>
-                      <div className="text-xs text-slate-400 mt-0.5">
-                        Esta tela chamará senhas de todos os serviços e guichês da unidade.
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setTempFilterMode('SPECIFIC')}
-                    className={`flex items-start p-3.5 rounded-xl border text-left transition-all ${
-                      tempFilterMode === 'SPECIFIC'
-                        ? 'bg-cyan-500/15 border-cyan-500 text-white'
-                        : 'bg-slate-800/40 border-slate-700/60 text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center h-5 mr-3">
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          tempFilterMode === 'SPECIFIC'
-                            ? 'border-cyan-400 bg-cyan-500'
-                            : 'border-slate-500 bg-transparent'
-                        }`}
-                      >
-                        {tempFilterMode === 'SPECIFIC' && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm text-white">
-                        Serviços Específicos do Setor
-                      </div>
-                      <div className="text-xs text-slate-400 mt-0.5">
-                        Ideal para telas em salas de espera de Triagem, Laboratório, Consultórios, etc.
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Lista de Serviços (quando modo SPECIFIC está ativo) */}
-              {tempFilterMode === 'SPECIFIC' && (
-                <div className="space-y-3 pt-2 border-t border-slate-800 animate-in fade-in">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Serviços que esta tela irá chamar:
-                    </label>
-                    <div className="flex space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => setTempSelectedIds(allServices.map((s) => s.id))}
-                        className="text-xs text-cyan-400 hover:underline"
-                      >
-                        Marcar todos
-                      </button>
-                      <span className="text-xs text-slate-600">|</span>
-                      <button
-                        type="button"
-                        onClick={() => setTempSelectedIds([])}
-                        className="text-xs text-slate-400 hover:underline"
-                      >
-                        Desmarcar
-                      </button>
-                    </div>
-                  </div>
-
-                  {allServices.length === 0 ? (
-                    <div className="p-4 rounded-xl bg-slate-800/40 text-center text-xs text-slate-400">
-                      Nenhum serviço ativo encontrado para esta unidade.
-                    </div>
-                  ) : (
-                    <div className="max-h-52 overflow-y-auto space-y-2 pr-1">
-                      {allServices.map((service) => {
-                        const isChecked = tempSelectedIds.includes(service.id)
-                        return (
-                          <label
-                            key={service.id}
-                            className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-colors ${
-                              isChecked
-                                ? 'bg-cyan-500/10 border-cyan-500/40 text-white'
-                                : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-800/60'
-                            }`}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => handleToggleService(service.id)}
-                                className="w-4 h-4 rounded text-cyan-500 bg-slate-900 border-slate-700 focus:ring-cyan-400"
-                              />
-                              <span className="text-sm font-medium">{service.name}</span>
-                            </div>
-                            <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                              {service.prefix}
-                            </span>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  )}
-
-                  {tempSelectedIds.length === 0 && (
-                    <p className="text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5">
-                      ⚠️ Nenhum serviço selecionado. Se salvar assim, a tela chamará todos os serviços por padrão.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Link Kiosk / Smart TV para facilitar configuração remota */}
-              <div className="space-y-2 pt-2 border-t border-slate-800">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    URL para Smart TV / Kiosk Box
-                  </label>
-                  <span className="text-[11px] text-slate-500">Salva automaticamente neste dispositivo</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={getKioskUrl()}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none select-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCopyKioskUrl}
-                    className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors"
-                  >
-                    {copiedUrl ? (
-                      <>
-                        <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400">Copiado</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copiar</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  Dica: Para Smart TVs ou TV Boxes novos, basta abrir esta URL direta no navegador para já iniciar com este setor configurado.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer do Modal */}
-            <div className="flex items-center justify-end space-x-3 px-6 py-4 border-t border-slate-800 bg-slate-900/90">
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(false)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveSettings}
-                className="flex items-center space-x-2 px-5 py-2 rounded-xl text-sm font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md"
-              >
-                <Check className="w-4 h-4" />
-                <span>Salvar Configuração</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   )
 }
