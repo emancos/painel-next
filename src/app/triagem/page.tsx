@@ -133,11 +133,67 @@ export default function TriagemTotemPage() {
     window.print()
   }
 
-  const getServiceIcon = (name: string) => {
+  const getServiceVisuals = (name: string) => {
     const n = name.toLowerCase()
-    if (n.includes('caixa') || n.includes('pagamento')) return <CreditCard className="w-8 h-8 text-amber-400" />
-    if (n.includes('triagem') || n.includes('doc')) return <FileText className="w-8 h-8 text-emerald-400" />
-    return <Layers className="w-8 h-8 text-cyan-400" />
+    if (n.includes('caixa') || n.includes('pagamento')) {
+      return {
+        icon: <CreditCard className="w-8 h-8 text-amber-500" />,
+        badgeClass: 'bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300',
+        cardClass: 'card-boom-amber',
+        accentGradient: 'from-amber-500 to-orange-500',
+      }
+    }
+    if (n.includes('triagem') || n.includes('doc')) {
+      return {
+        icon: <FileText className="w-8 h-8 text-emerald-500" />,
+        badgeClass: 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300',
+        cardClass: 'card-boom-emerald',
+        accentGradient: 'from-emerald-500 to-teal-500',
+      }
+    }
+    if (n.includes('priorit')) {
+      return {
+        icon: <Sparkles className="w-8 h-8 text-purple-500" />,
+        badgeClass: 'bg-purple-500/15 border border-purple-500/30 text-purple-700 dark:text-purple-300',
+        cardClass: 'card-boom-purple',
+        accentGradient: 'from-purple-500 to-indigo-500',
+      }
+    }
+    return {
+      icon: <Layers className="w-8 h-8 text-cyan-500" />,
+      badgeClass: 'bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300',
+      cardClass: 'card-boom-cyan',
+      accentGradient: 'from-cyan-500 to-blue-600',
+    }
+  }
+
+  const getPriorityVisuals = (p: PriorityItem) => {
+    const n = p.name.toLowerCase()
+    if (n.includes('especial') || n.includes('pcd') || n.includes('80')) {
+      return {
+        tag: '80+ • PCD • Mobilidade Reduzida',
+        activeClass: 'border-2 border-purple-500 bg-purple-500/15 dark:bg-purple-500/20 text-purple-900 dark:text-purple-200 shadow-[0_0_25px_rgba(168,85,247,0.3)] ring-2 ring-purple-500/30',
+        inactiveClass: 'border border-purple-200 dark:border-purple-900/40 bg-purple-50/50 dark:bg-slate-900/40 hover:border-purple-400',
+        dotClass: 'bg-purple-500',
+        pillClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+      }
+    }
+    if (n.includes('priorit') || n.includes('60')) {
+      return {
+        tag: '60+ • Gestantes • Lactantes',
+        activeClass: 'border-2 border-amber-500 bg-amber-500/15 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200 shadow-[0_0_25px_rgba(245,158,11,0.3)] ring-2 ring-amber-500/30',
+        inactiveClass: 'border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-slate-900/40 hover:border-amber-400',
+        dotClass: 'bg-amber-500',
+        pillClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+      }
+    }
+    return {
+      tag: 'Ordem de Chegada',
+      activeClass: 'border-2 border-cyan-500 bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-900 dark:text-cyan-200 shadow-[0_0_25px_rgba(6,182,212,0.3)] ring-2 ring-cyan-500/30',
+      inactiveClass: 'border border-cyan-200 dark:border-cyan-900/40 bg-cyan-50/50 dark:bg-slate-900/40 hover:border-cyan-400',
+      dotClass: 'bg-cyan-500',
+      pillClass: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30',
+    }
   }
 
   if (isAuthChecking) {
@@ -150,14 +206,19 @@ export default function TriagemTotemPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col justify-between p-6 md:p-10 admin-page-container transition-colors duration-200">
+    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col justify-between p-6 md:p-10 admin-page-container transition-colors duration-200 relative overflow-hidden">
+      {/* Luzes de Fundo Ambientais */}
+      <div className="mesh-orb-cyan -top-24 -left-24 w-96 h-96 opacity-40 dark:opacity-30 pointer-events-none" />
+      <div className="mesh-orb-amber top-1/2 -right-24 w-[450px] h-[450px] opacity-35 dark:opacity-20 pointer-events-none" />
+      <div className="mesh-orb-purple -bottom-24 left-1/3 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none" />
+
       {/* Topo do Totem com Identidade Institucional da Unidade e Identificação do Operador */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800 z-10">
         <div className="flex items-center space-x-4">
           {currentUser?.role === 'ADMIN' ? (
             <Link
               href="/admin"
-              className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all shadow-xs hover:scale-105"
               title="Voltar ao Painel Administrativo"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -165,14 +226,14 @@ export default function TriagemTotemPage() {
           ) : currentUser?.role === 'ATTENDANT' ? (
             <Link
               href="/atendimento"
-              className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all shadow-xs hover:scale-105"
               title="Voltar ao Atendimento"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
           ) : (
             <div
-              className="p-3 rounded-2xl bg-cyan-950/40 border border-cyan-800/40 text-cyan-400"
+              className="p-3 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 shadow-xs"
               title="Posto de Triagem e Recepção Autorizado"
             >
               <Ticket className="w-5 h-5" />
@@ -183,39 +244,40 @@ export default function TriagemTotemPage() {
             <img
               src={unit.logoUrl}
               alt="Logo"
-              className="w-12 h-12 object-contain rounded-2xl bg-white/10 p-1.5 border border-slate-700 shadow-md"
+              className="w-12 h-12 object-contain rounded-2xl bg-white/10 p-1.5 border border-slate-300 dark:border-slate-700 shadow-md transition-transform hover:scale-105"
             />
           ) : (
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-lg">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-cyan-500/30">
               {unit?.name?.charAt(0) || 'U'}
             </div>
           )}
 
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 {unit?.name || 'Unidade de Atendimento'}
               </h1>
-              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-semibold uppercase">
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold uppercase shadow-xs">
                 Totem de Emissão
               </span>
             </div>
-            <p className="text-xs text-slate-400 font-medium">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               {unit?.subtitle || 'Toque no serviço desejado para emitir sua senha'}
             </p>
           </div>
         </div>
 
         {/* Informações do Operador Autenticado e Ações Rápidas */}
-        <div className="flex items-center space-x-3 shrink-0 self-end md:self-auto">
+        <div className="flex items-center space-x-3 shrink-0 self-end md:self-auto flex-wrap gap-y-2">
           {/* Alternador de Tema Claro / Escuro (Admin/Sistema) */}
           <AdminThemeToggle />
+
           {currentUser && (
-            <div className="h-11 px-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 hidden sm:flex items-center space-x-2 shrink-0">
-              <UserCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+            <div className="h-11 px-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-800 hidden sm:flex items-center space-x-2 shrink-0 shadow-xs">
+              <UserCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
               <div className="text-left text-xs leading-tight">
-                <span className="font-bold text-white block">{currentUser.name}</span>
-                <span className="text-[10px] text-cyan-400 font-mono block">
+                <span className="font-bold text-slate-900 dark:text-white block">{currentUser.name}</span>
+                <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono block">
                   {currentUser.role === 'TRIAGE' ? 'Operador de Triagem' : currentUser.role}
                 </span>
               </div>
@@ -227,10 +289,10 @@ export default function TriagemTotemPage() {
             <Link
               href={`/painel/${unit.id}`}
               target="_blank"
-              className="h-11 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold transition-all shadow-sm flex items-center space-x-2 shrink-0"
+              className="h-11 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white border border-slate-300 dark:border-slate-800 text-xs font-bold transition-all shadow-xs flex items-center space-x-2 shrink-0 active:scale-95"
               title="Abrir Painel de Chamadas da TV"
             >
-              <Tv className="w-4 h-4 text-cyan-400" />
+              <Tv className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
               <span className="hidden lg:inline">Painel TV</span>
             </Link>
           )}
@@ -238,7 +300,7 @@ export default function TriagemTotemPage() {
           {/* Botão Sair / Logout */}
           <button
             onClick={handleLogout}
-            className="h-11 px-4 rounded-2xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 text-xs font-bold transition-all shadow-sm flex items-center space-x-2 shrink-0"
+            className="h-11 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 text-xs font-bold transition-all shadow-xs flex items-center space-x-2 shrink-0 active:scale-95"
             title="Encerrar Sessão"
           >
             <LogOut className="w-4 h-4" />
@@ -248,55 +310,70 @@ export default function TriagemTotemPage() {
       </header>
 
       {/* Conteúdo Central */}
-      <main className="max-w-5xl w-full mx-auto my-8 space-y-8 flex-1 flex flex-col justify-center">
+      <main className="max-w-5xl w-full mx-auto my-8 space-y-8 flex-1 flex flex-col justify-center z-10">
         {errorMsg && (
-          <div className="p-4 rounded-2xl bg-rose-950/50 border border-rose-500/50 text-rose-200 text-sm">
+          <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-800 dark:text-rose-200 text-sm font-bold shadow-xs">
             {errorMsg}
           </div>
         )}
 
         {/* Campo Opcional de Identificação para Fala */}
-        <div className="p-6 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-md">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-2 mb-2">
-            <User className="w-4 h-4 text-cyan-400" />
-            <span>Nome do Cidadão / Paciente (Opcional - para ser anunciado no painel)</span>
+        <div className="card-boom p-6">
+          <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center space-x-2 mb-2">
+            <User className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+            <span>Nome do Cidadão / Paciente (Opcional - para ser anunciado no painel por voz)</span>
           </label>
           <input
             type="text"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
             placeholder="Digite seu nome (Ex: João da Silva)..."
-            className="w-full px-5 py-4 rounded-2xl bg-slate-950 border border-slate-700/80 text-white placeholder-slate-600 font-medium text-lg focus:outline-none focus:border-cyan-500 transition-colors"
+            className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 font-medium text-lg focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all shadow-inner"
           />
         </div>
 
-        {/* Seleção de Prioridade (Abas) */}
+        {/* Seleção de Prioridade (Abas Específicas por Cor) */}
         <div className="space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-            1. Selecione o Tipo de Atendimento:
+          <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-cyan-500" />
+            <span>1. Selecione o Tipo de Atendimento:</span>
           </span>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             {priorities.map((p) => {
               const isSelected = selectedPriority?.id === p.id
+              const vis = getPriorityVisuals(p)
               return (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => setSelectedPriority(p)}
-                  className={`p-4 rounded-2xl border text-left transition-all ${isSelected
-                      ? 'border-cyan-400 bg-cyan-950/40 shadow-[0_0_20px_rgba(6,182,212,0.25)]'
-                      : 'border-slate-800 bg-slate-900/40 hover:border-slate-700'
-                    }`}
+                  className={`p-5 rounded-2xl text-left transition-all ${
+                    isSelected ? vis.activeClass : vis.inactiveClass
+                  } active:scale-[0.98] shadow-xs cursor-pointer`}
                 >
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: p.colorHex }}
-                    />
-                    <span className="font-bold text-white text-sm">{p.name}</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2.5">
+                      <span
+                        className={`w-3.5 h-3.5 rounded-full ${vis.dotClass} shadow-xs`}
+                        style={{ backgroundColor: p.colorHex || undefined }}
+                      />
+                      <span className="font-black text-slate-900 dark:text-white text-base">{p.name}</span>
+                    </div>
+
+                    {isSelected && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-950 text-white font-extrabold uppercase tracking-wider shadow-xs">
+                        Selecionado
+                      </span>
+                    )}
                   </div>
+
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider block mb-1.5 w-fit ${vis.pillClass}`}>
+                    {vis.tag}
+                  </span>
+
                   {p.description && (
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
                       {p.description}
                     </p>
                   )}
@@ -308,37 +385,47 @@ export default function TriagemTotemPage() {
 
         {/* Seleção do Serviço (Botões Grandes de Toque) */}
         <div className="space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-            2. Toque no Serviço para Imprimir / Emitir a Senha:
+          <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>2. Toque no Serviço para Imprimir / Emitir a Senha:</span>
           </span>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {services.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                disabled={isPending || !selectedPriority}
-                onClick={() => handleIssue(s, selectedPriority!)}
-                className="group p-6 rounded-3xl bg-slate-900/70 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/60 transition-all shadow-xl hover:shadow-cyan-500/10 flex items-center justify-between text-left active:scale-[0.98] disabled:opacity-50"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center group-hover:scale-105 transition-transform">
-                    {getServiceIcon(s.name)}
-                  </div>
-                  <div>
-                    <span className="text-xs font-mono text-cyan-400 font-bold block mb-0.5">
-                      Prefixo: {s.prefix}
-                    </span>
-                    <h3 className="text-xl font-bold text-white group-hover:text-cyan-300 transition-colors">
-                      {s.name}
-                    </h3>
-                  </div>
-                </div>
 
-                <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 group-hover:bg-cyan-500 group-hover:text-slate-950 transition-colors">
-                  <Printer className="w-6 h-6" />
-                </div>
-              </button>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {services.map((s) => {
+              const vis = getServiceVisuals(s.name)
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={isPending || !selectedPriority}
+                  onClick={() => handleIssue(s, selectedPriority!)}
+                  className={`group p-6 rounded-3xl card-boom ${vis.cardClass} flex items-center justify-between text-left active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-md`}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700/60 flex items-center justify-center group-hover:scale-110 group-hover:rotate-1 transition-all shadow-xs">
+                      {vis.icon}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-mono text-cyan-600 dark:text-cyan-400 font-black px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20">
+                          Prefixo: {s.prefix}
+                        </span>
+                      </div>
+                      <h3 className="text-xl font-black text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">
+                        {s.name}
+                      </h3>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
+                        Toque para imprimir ficha
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border border-cyan-500/30 group-hover:bg-gradient-to-r group-hover:from-cyan-500 group-hover:to-blue-600 group-hover:text-white group-hover:border-transparent transition-all shadow-xs">
+                    <Printer className="w-6 h-6" />
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
       </main>
