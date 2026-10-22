@@ -720,8 +720,9 @@ export async function markNoShow(ticketId: string) {
 
 /**
  * Obtém os dados iniciais para carregar o painel da TV.
+ * Suporta filtragem por serviços específicos caso a tela seja de um setor determinado.
  */
-export async function getPanelInitialData(unitId: string) {
+export async function getPanelInitialData(unitId: string, serviceIds?: string[]) {
   // 1. Dados da Unidade
   const [unit] = await db
     .select()
@@ -729,10 +730,32 @@ export async function getPanelInitialData(unitId: string) {
     .where(eq(units.id, unitId))
     .limit(1)
 
+  // 1.1 Lista de serviços ativos da unidade (para configuração do painel)
+  const allServices = await db
+    .select({
+      id: services.id,
+      name: services.name,
+      prefix: services.prefix,
+    })
+    .from(services)
+    .where(and(eq(services.unitId, unitId), eq(services.active, true)))
+    .orderBy(asc(services.name))
+
+  const validServiceIds = Array.isArray(serviceIds) && serviceIds.length > 0 ? serviceIds : null
+
   // 2. Última senha chamada ativa no momento
+  const activeConditions = [
+    eq(tickets.unitId, unitId),
+    inArray(tickets.status, ['CALLED', 'IN_PROGRESS']),
+  ]
+  if (validServiceIds) {
+    activeConditions.push(inArray(tickets.serviceId, validServiceIds))
+  }
+
   const activeTickets = await db
     .select({
       id: tickets.id,
+      serviceId: tickets.serviceId,
       ticketPrefix: tickets.ticketPrefix,
       ticketNumber: tickets.ticketNumber,
       formattedTicket: tickets.formattedTicket,
@@ -749,14 +772,23 @@ export async function getPanelInitialData(unitId: string) {
     .innerJoin(services, eq(tickets.serviceId, services.id))
     .innerJoin(priorities, eq(tickets.priorityId, priorities.id))
     .leftJoin(locations, eq(tickets.locationId, locations.id))
-    .where(and(eq(tickets.unitId, unitId), inArray(tickets.status, ['CALLED', 'IN_PROGRESS'])))
+    .where(and(...activeConditions))
     .orderBy(desc(tickets.calledAt))
     .limit(6)
 
   // 3. Chamadas anteriores concluídas recentemente (para histórico na TV)
+  const historyConditions = [
+    eq(ticketsHistory.unitId, unitId),
+    sql`${ticketsHistory.calledAt} IS NOT NULL`,
+  ]
+  if (validServiceIds) {
+    historyConditions.push(inArray(ticketsHistory.serviceId, validServiceIds))
+  }
+
   const recentFinished = await db
     .select({
       id: ticketsHistory.id,
+      serviceId: ticketsHistory.serviceId,
       ticketPrefix: ticketsHistory.ticketPrefix,
       ticketNumber: ticketsHistory.ticketNumber,
       formattedTicket: ticketsHistory.formattedTicket,
@@ -773,7 +805,7 @@ export async function getPanelInitialData(unitId: string) {
     .innerJoin(services, eq(ticketsHistory.serviceId, services.id))
     .innerJoin(priorities, eq(ticketsHistory.priorityId, priorities.id))
     .leftJoin(locations, eq(ticketsHistory.locationId, locations.id))
-    .where(and(eq(ticketsHistory.unitId, unitId), sql`${ticketsHistory.calledAt} IS NOT NULL`))
+    .where(and(...historyConditions))
     .orderBy(desc(ticketsHistory.calledAt))
     .limit(6)
 
@@ -816,6 +848,7 @@ export async function getPanelInitialData(unitId: string) {
 
   return {
     unit: unit || { name: 'Unidade Principal', code: 'UNI01' },
+    allServices,
     currentTicket: current
       ? {
           ...current,
