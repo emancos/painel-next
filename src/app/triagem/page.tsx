@@ -22,6 +22,7 @@ import {
   Loader2
 } from 'lucide-react'
 import Link from 'next/link'
+import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 
 interface ServiceItem {
   id: string
@@ -149,7 +150,7 @@ export default function TriagemTotemPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col justify-between p-6 md:p-10">
+    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col justify-between p-6 md:p-10 admin-page-container transition-colors duration-200">
       {/* Topo do Totem com Identidade Institucional da Unidade e Identificação do Operador */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
         <div className="flex items-center space-x-4">
@@ -206,16 +207,18 @@ export default function TriagemTotemPage() {
         </div>
 
         {/* Informações do Operador Autenticado e Ações Rápidas */}
-        <div className="flex items-center space-x-3 self-end md:self-auto">
+        <div className="flex items-center space-x-3 shrink-0 self-end md:self-auto">
+          {/* Alternador de Tema Claro / Escuro (Admin/Sistema) */}
+          <AdminThemeToggle />
           {currentUser && (
-            <div className="text-right hidden sm:block bg-slate-900/60 px-3.5 py-2 rounded-2xl border border-slate-800">
-              <span className="text-xs font-bold text-white flex items-center justify-end gap-1.5">
-                <UserCheck className="w-3.5 h-3.5 text-cyan-400" />
-                {currentUser.name}
-              </span>
-              <span className="text-[10px] text-cyan-400 font-mono block">
-                {currentUser.role === 'TRIAGE' ? 'Operador de Triagem / Recepção' : currentUser.role}
-              </span>
+            <div className="h-11 px-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 hidden sm:flex items-center space-x-2 shrink-0">
+              <UserCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+              <div className="text-left text-xs leading-tight">
+                <span className="font-bold text-white block">{currentUser.name}</span>
+                <span className="text-[10px] text-cyan-400 font-mono block">
+                  {currentUser.role === 'TRIAGE' ? 'Operador de Triagem' : currentUser.role}
+                </span>
+              </div>
             </div>
           )}
 
@@ -224,7 +227,7 @@ export default function TriagemTotemPage() {
             <Link
               href={`/painel/${unit.id}`}
               target="_blank"
-              className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold transition-all shadow-sm"
+              className="h-11 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold transition-all shadow-sm flex items-center space-x-2 shrink-0"
               title="Abrir Painel de Chamadas da TV"
             >
               <Tv className="w-4 h-4 text-cyan-400" />
@@ -235,7 +238,7 @@ export default function TriagemTotemPage() {
           {/* Botão Sair / Logout */}
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 text-xs font-bold transition-all shadow-sm"
+            className="h-11 px-4 rounded-2xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 text-xs font-bold transition-all shadow-sm flex items-center space-x-2 shrink-0"
             title="Encerrar Sessão"
           >
             <LogOut className="w-4 h-4" />

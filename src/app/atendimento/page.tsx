@@ -46,6 +46,7 @@ import {
   Volume2
 } from 'lucide-react'
 import Link from 'next/link'
+import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 
 interface LocationItem {
   id: string
@@ -498,13 +499,13 @@ export default function AtendimentoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8 justify-between">
+    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8 justify-between admin-page-container transition-colors duration-200">
       {/* Topo do Módulo do Atendente */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-800 gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-800 gap-4 mb-6">
         <div className="flex items-center space-x-4">
           <Link
             href="/"
-            className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="h-11 w-11 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors flex items-center justify-center shrink-0"
             title="Voltar ao Hub"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -520,12 +521,14 @@ export default function AtendimentoPage() {
         </div>
 
         {/* Controles de Topo: Botão Admin (se ADMIN), Seletor de Guichê e Usuário */}
-        <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+        <div className="flex items-center space-x-3 shrink-0">
+          {/* Alternador de Tema Claro / Escuro (Admin/Sistema) */}
+          <AdminThemeToggle />
           {/* Requisito 5: Atalho para Admin caso o usuário logado tenha perfil ADMIN */}
           {currentUser.role === 'ADMIN' && (
             <Link
               href="/admin"
-              className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/30 font-bold text-xs transition-all shadow-sm shadow-cyan-500/10 active:scale-95"
+              className="h-11 px-4 rounded-2xl bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/30 font-bold text-xs transition-all shadow-sm shadow-cyan-500/10 active:scale-95 flex items-center space-x-2 shrink-0"
               title="Acessar Painel Administrativo Global"
             >
               <ShieldCheck className="w-4 h-4" />
@@ -533,10 +536,10 @@ export default function AtendimentoPage() {
             </Link>
           )}
 
-          <div className="flex items-center space-x-2 bg-slate-900/80 px-3 py-2 rounded-xl border border-slate-800">
+          <div className="h-11 px-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center space-x-2.5 shrink-0">
             <User className="w-4 h-4 text-cyan-400" />
-            <div className="text-left text-xs">
-              <span className="font-bold text-white block">{currentUser.name}</span>
+            <div className="text-left text-xs leading-tight">
+              <span className="font-bold text-white block truncate max-w-[120px]">{currentUser.name}</span>
               <span className="text-[10px] text-cyan-400 font-mono">{currentUser.role}</span>
             </div>
             <button
@@ -550,11 +553,11 @@ export default function AtendimentoPage() {
 
           {/* Guichê / Sala / Ambulatório ao qual o usuário está vinculado */}
           {userLocations.length > 1 ? (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center shrink-0">
               <select
                 value={selectedLocationId}
                 onChange={(e) => setSelectedLocationId(e.target.value)}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 font-bold text-sm focus:outline-none focus:border-cyan-500"
+                className="h-11 px-4 rounded-2xl bg-slate-900 border border-slate-700 text-cyan-300 font-bold text-sm focus:outline-none focus:border-cyan-500 shrink-0"
               >
                 {userLocations.map((loc) => (
                   <option key={loc.id} value={loc.id}>
@@ -564,21 +567,21 @@ export default function AtendimentoPage() {
               </select>
             </div>
           ) : selectedLocation ? (
-            <div className="flex items-center space-x-2.5 px-4 py-2 rounded-xl bg-cyan-950/60 border border-cyan-800/80 text-cyan-300 shadow-sm">
+            <div className="h-11 px-4 rounded-2xl bg-cyan-950/60 border border-cyan-800/80 text-cyan-300 flex items-center space-x-2.5 shrink-0 shadow-sm">
               <DoorOpen className="w-4 h-4 text-cyan-400 shrink-0" />
-              <div className="text-left">
-                <span className="font-mono font-bold text-sm text-white block leading-tight">
+              <div className="text-left leading-tight">
+                <span className="font-mono font-bold text-sm text-white block">
                   {selectedLocation.name} {selectedLocation.number.toString().padStart(2, '0')}
                 </span>
                 {selectedLocation.roomName && (
-                  <span className="text-[10px] text-cyan-400/90 block leading-tight font-medium">
+                  <span className="text-[10px] text-cyan-400/90 block font-medium">
                     {selectedLocation.roomName}
                   </span>
                 )}
               </div>
             </div>
           ) : (
-            <div className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+            <div className="h-11 px-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center space-x-2 shrink-0">
               <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
               <span>Sem posto vinculado</span>
             </div>

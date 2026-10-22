@@ -12,6 +12,7 @@ import {
   LogInIcon,
 } from 'lucide-react'
 import { getUnitData } from '@/actions/tickets'
+import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 
 export default function HomePage() {
   const [unitId, setUnitId] = useState<string>('baa07eef-927f-4e15-9e0f-626885b6b1c8')
@@ -33,9 +34,9 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col admin-page-container transition-colors duration-200">
       {/* Navbar Superior com Logo, Nome e Subtítulo da Unidade */}
-      <header className="border-b border-slate-800/80 bg-slate-950/40 backdrop-blur-md px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header data-navbar="root" className="border-b border-slate-800/80 bg-slate-950/40 backdrop-blur-md px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center space-x-3.5">
           {unitLogoUrl ? (
             <img
@@ -63,10 +64,11 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 shrink-0">
+          <AdminThemeToggle />
           <Link
             href="/login"
-            className="flex items-center space-x-1.5 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 text-xs font-bold transition-all"
+            className="h-11 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0"
           >
             <LogInIcon className="w-4 h-4 text-cyan-400" />
             <span>Login</span>
@@ -75,7 +77,7 @@ export default function HomePage() {
           <Link
             href={`/painel/${unitId}`}
             target="_blank"
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-all shadow-[0_0_20px_rgba(6,182,212,0.35)]"
+            className="h-11 px-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-all shadow-[0_0_20px_rgba(6,182,212,0.35)] flex items-center space-x-2 shrink-0"
           >
             <Tv className="w-4 h-4" />
             <span>Painel TV Fullscreen</span>

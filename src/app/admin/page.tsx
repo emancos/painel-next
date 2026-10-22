@@ -68,6 +68,7 @@ import {
 import { getSessionAction, logoutAction } from '@/actions/auth'
 import { speechManager } from '@/lib/speech'
 import { buildTicketAnnouncement } from '@/lib/speech-normalizer'
+import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -735,13 +736,13 @@ export default function AdminPage() {
   const selectedUnit = units.find((u) => u.id === selectedUnitId)
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8">
+    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8 admin-page-container transition-colors duration-200">
       {/* Header do Painel de Administração */}
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 border-b border-slate-800 gap-4">
         <div className="flex items-center space-x-4">
           <Link
             href="/"
-            className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="h-11 w-11 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors flex items-center justify-center shrink-0"
             title="Voltar ao Hub"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -756,30 +757,30 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3 shrink-0">
           {/* Unidade Selecionada no Header */}
           {selectedUnit && (
-            <div className="hidden md:flex items-center space-x-3 px-4 py-2 rounded-2xl bg-slate-900/90 border border-slate-800">
+            <div className="hidden lg:flex items-center h-11 space-x-3 px-3.5 rounded-2xl bg-slate-900/90 border border-slate-800">
               {selectedUnit.logoUrl ? (
                 <img
                   src={selectedUnit.logoUrl}
                   alt="Brasão"
-                  className="w-9 h-9 object-contain rounded-xl bg-white/10 p-1 border border-slate-700/60"
+                  className="w-7 h-7 object-contain rounded-lg bg-white/10 p-0.5 border border-slate-700/60"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center text-xs">
+                <div className="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center text-xs">
                   {selectedUnit.code?.slice(0, 2) || 'UN'}
                 </div>
               )}
-              <div className="text-left">
+              <div className="text-left leading-tight">
                 <div className="flex items-center space-x-1.5">
                   <span className="text-xs font-bold text-white block">{selectedUnit.name}</span>
                   <span className="text-[10px] font-mono text-cyan-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
                     {selectedUnit.code}
                   </span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-[11px] text-slate-400 block max-w-[180px] truncate">{selectedUnit.subtitle || 'Unidade em Gerenciamento'}</span>
+                <div className="flex items-center space-x-2 mt-0.5">
+                  <span className="text-[11px] text-slate-400 block max-w-[150px] truncate">{selectedUnit.subtitle || 'Unidade'}</span>
                   <span className="text-[10px] text-cyan-300 font-mono flex items-center gap-1 bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/40">
                     <Globe className="w-2.5 h-2.5" />
                     {selectedUnit.timezone || 'America/Sao_Paulo'}
@@ -789,19 +790,22 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Alternador de Tema Claro / Escuro (Admin) */}
+          <AdminThemeToggle />
+
           {/* Administrador Logado */}
           {currentUser && (
-            <div className="flex items-center space-x-3 bg-slate-900/80 px-4 py-2 rounded-2xl border border-slate-800">
-              <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-xs">
+            <div className="flex items-center h-11 space-x-3 bg-slate-900/80 px-3.5 rounded-2xl border border-slate-800">
+              <div className="w-7 h-7 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-xs shrink-0">
                 {currentUser.name.charAt(0)}
               </div>
-              <div className="text-left">
-                <span className="text-xs font-bold text-white block">{currentUser.name}</span>
-                <span className="text-[11px] text-cyan-400 font-mono">{currentUser.role}</span>
+              <div className="text-left leading-tight">
+                <span className="text-xs font-bold text-white block truncate max-w-[120px]">{currentUser.name}</span>
+                <span className="text-[10px] text-cyan-400 font-mono">{currentUser.role}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-2 text-slate-400 hover:text-rose-400 transition-colors ml-2"
+                className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors ml-1"
                 title="Sair do Sistema"
               >
                 <LogOut className="w-4 h-4" />
@@ -829,10 +833,10 @@ export default function AdminPage() {
       )}
 
       {/* Navegação por Abas */}
-      <div className="flex items-center space-x-2 my-6 border-b border-slate-800 pb-2 overflow-x-auto">
+      <div className="flex items-center space-x-2 my-6 border-b border-slate-800 pb-3 overflow-x-auto">
         <button
           onClick={() => setActiveTab('UNITS')}
-          className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
             activeTab === 'UNITS'
               ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
               : 'text-slate-400 hover:text-white hover:bg-slate-900'
@@ -844,7 +848,7 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('STRUCTURE')}
-          className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
             activeTab === 'STRUCTURE'
               ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
               : 'text-slate-400 hover:text-white hover:bg-slate-900'
@@ -856,7 +860,7 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('LOCATIONS')}
-          className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
             activeTab === 'LOCATIONS'
               ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
               : 'text-slate-400 hover:text-white hover:bg-slate-900'
@@ -868,7 +872,7 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('SERVICES')}
-          className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
             activeTab === 'SERVICES'
               ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
               : 'text-slate-400 hover:text-white hover:bg-slate-900'
@@ -880,7 +884,7 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('USERS')}
-          className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
             activeTab === 'USERS'
               ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
               : 'text-slate-400 hover:text-white hover:bg-slate-900'
@@ -892,7 +896,7 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('SPEECH')}
-          className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
             activeTab === 'SPEECH'
               ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
               : 'text-slate-400 hover:text-white hover:bg-slate-900'
@@ -904,7 +908,7 @@ export default function AdminPage() {
 
         <button
           onClick={() => setActiveTab('ATTENDANCE')}
-          className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`h-10 flex items-center space-x-2 px-4 rounded-xl text-xs font-bold transition-all shrink-0 ${
             activeTab === 'ATTENDANCE'
               ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
               : 'text-slate-400 hover:text-white hover:bg-slate-900'
