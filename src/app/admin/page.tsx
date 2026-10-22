@@ -2465,32 +2465,32 @@ export default function AdminPage() {
                       onClick={() => setAttendanceOrderMode('PRIORITY')}
                       className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                         attendanceOrderMode === 'PRIORITY'
-                          ? 'bg-cyan-950/40 border-cyan-500 shadow-md shadow-cyan-500/10 ring-1 ring-cyan-500'
-                          : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
+                          ? 'bg-cyan-50/90 dark:bg-cyan-950/40 border-2 border-cyan-500 shadow-md shadow-cyan-500/10 ring-1 ring-cyan-500'
+                          : 'bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                           <span className={`w-3 h-3 rounded-full border flex items-center justify-center ${
-                            attendanceOrderMode === 'PRIORITY' ? 'border-cyan-400 bg-cyan-400' : 'border-slate-600'
+                            attendanceOrderMode === 'PRIORITY' ? 'border-cyan-500 bg-cyan-500' : 'border-slate-400 dark:border-slate-600'
                           }`}>
-                            {attendanceOrderMode === 'PRIORITY' && <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                            {attendanceOrderMode === 'PRIORITY' && <span className="w-1.5 h-1.5 rounded-full bg-white dark:bg-slate-950" />}
                           </span>
                           Prioridade Estrita
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono font-bold">
                           Padrão Legal
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed mb-3">
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
                         Senhas de maior prioridade são sempre atendidas primeiro. A fila convencional aguarda o término das prioritárias.
                       </p>
                       <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                        <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">1º Urgência</span>
-                        <span className="text-slate-600">➔</span>
-                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">2º Prioritário</span>
-                        <span className="text-slate-600">➔</span>
-                        <span className="px-2 py-0.5 rounded bg-slate-700 text-slate-300">3º Normal</span>
+                        <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30">1º Urgência</span>
+                        <span className="text-slate-400 dark:text-slate-600">➔</span>
+                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30">2º Prioritário</span>
+                        <span className="text-slate-400 dark:text-slate-600">➔</span>
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600">3º Normal</span>
                       </div>
                     </div>
 
@@ -2499,32 +2499,32 @@ export default function AdminPage() {
                       onClick={() => setAttendanceOrderMode('INTERLEAVED')}
                       className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                         attendanceOrderMode === 'INTERLEAVED'
-                          ? 'bg-amber-950/40 border-amber-500 shadow-md shadow-amber-500/10 ring-1 ring-amber-500'
-                          : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
+                          ? 'bg-amber-50/90 dark:bg-amber-950/40 border-2 border-amber-500 shadow-md shadow-amber-500/10 ring-1 ring-amber-500'
+                          : 'bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                           <span className={`w-3 h-3 rounded-full border flex items-center justify-center ${
-                            attendanceOrderMode === 'INTERLEAVED' ? 'border-amber-400 bg-amber-400' : 'border-slate-600'
+                            attendanceOrderMode === 'INTERLEAVED' ? 'border-amber-500 bg-amber-500' : 'border-slate-400 dark:border-slate-600'
                           }`}>
-                            {attendanceOrderMode === 'INTERLEAVED' && <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                            {attendanceOrderMode === 'INTERLEAVED' && <span className="w-1.5 h-1.5 rounded-full bg-white dark:bg-slate-950" />}
                           </span>
                           Intercalado (1:1:1)
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 font-mono font-bold">
                           Ciclo Dinâmico
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed mb-3">
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
                         Alterna sequencialmente entre as categorias para não reter o fluxo convencional em dias de alto afluxo.
                       </p>
                       <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                        <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">1 Urg.</span>
-                        <span className="text-slate-600">➔</span>
-                        <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">1 Prior.</span>
-                        <span className="text-slate-600">➔</span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">1 Norm.</span>
+                        <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30">1 Urg.</span>
+                        <span className="text-slate-400 dark:text-slate-600">➔</span>
+                        <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30">1 Prior.</span>
+                        <span className="text-slate-400 dark:text-slate-600">➔</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600">1 Norm.</span>
                       </div>
                     </div>
                   </div>
@@ -2776,116 +2776,116 @@ export default function AdminPage() {
 
                 {attendanceOrderMode === 'PRIORITY' ? (
                   <div className="space-y-2.5">
-                    <div className="p-3 rounded-xl bg-slate-950 border border-rose-500/40 flex items-center justify-between">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-rose-300 dark:border-rose-500/40 flex items-center justify-between">
                       <div className="flex items-center space-x-2.5">
-                        <span className="text-xs font-mono font-bold text-rose-400">1º</span>
-                        <span className="font-mono font-bold text-sm text-white">SP001</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold">Urgência (80+/PCD)</span>
+                        <span className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400">1º</span>
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">SP001</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 font-semibold">Urgência (80+/PCD)</span>
                       </div>
-                      <span className="text-[11px] text-slate-400">Prioridade 3</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Prioridade 3</span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-slate-950 border border-rose-500/40 flex items-center justify-between">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-rose-300 dark:border-rose-500/40 flex items-center justify-between">
                       <div className="flex items-center space-x-2.5">
-                        <span className="text-xs font-mono font-bold text-rose-400">2º</span>
-                        <span className="font-mono font-bold text-sm text-white">SP002</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold">Urgência (80+/PCD)</span>
+                        <span className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400">2º</span>
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">SP002</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 font-semibold">Urgência (80+/PCD)</span>
                       </div>
-                      <span className="text-[11px] text-slate-400">Prioridade 3</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Prioridade 3</span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-slate-950 border border-amber-500/40 flex items-center justify-between">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-amber-300 dark:border-amber-500/40 flex items-center justify-between">
                       <div className="flex items-center space-x-2.5">
-                        <span className="text-xs font-mono font-bold text-amber-400">3º</span>
-                        <span className="font-mono font-bold text-sm text-white">PR001</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold">Prioritário Geral</span>
+                        <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">3º</span>
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">PR001</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 font-semibold">Prioritário Geral</span>
                       </div>
-                      <span className="text-[11px] text-slate-400">Prioridade 2</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Prioridade 2</span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-between opacity-80">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 flex items-center justify-between opacity-80">
                       <div className="flex items-center space-x-2.5">
-                        <span className="text-xs font-mono font-bold text-slate-400">4º</span>
-                        <span className="font-mono font-bold text-sm text-white">SG001</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold">Convencional</span>
+                        <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">4º</span>
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">SG001</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-semibold">Convencional</span>
                       </div>
-                      <span className="text-[11px] text-slate-400">Prioridade 1</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Prioridade 1</span>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-2.5">
-                    <div className="p-3 rounded-xl bg-slate-950 border border-rose-500/40 flex items-center justify-between">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-rose-300 dark:border-rose-500/40 flex items-center justify-between">
                       <div className="flex items-center space-x-2.5">
-                        <span className="text-xs font-mono font-bold text-rose-400">1º</span>
-                        <span className="font-mono font-bold text-sm text-white">SP001</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold">1 Urgência (80+)</span>
+                        <span className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400">1º</span>
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">SP001</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 font-semibold">1 Urgência (80+)</span>
                       </div>
-                      <span className="text-[10px] text-rose-400 font-mono">Ciclo 1</span>
+                      <span className="text-[10px] text-rose-600 dark:text-rose-400 font-mono font-bold">Ciclo 1</span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-slate-950 border border-amber-500/40 flex items-center justify-between">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-amber-300 dark:border-amber-500/40 flex items-center justify-between">
                       <div className="flex items-center space-x-2.5">
-                        <span className="text-xs font-mono font-bold text-amber-400">2º</span>
-                        <span className="font-mono font-bold text-sm text-white">PR001</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold">1 Prioritário</span>
+                        <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">2º</span>
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">PR001</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 font-semibold">1 Prioritário</span>
                       </div>
-                      <span className="text-[10px] text-amber-400 font-mono">Ciclo 1</span>
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono font-bold">Ciclo 1</span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-slate-950 border border-cyan-500/40 flex items-center justify-between">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-cyan-300 dark:border-cyan-500/40 flex items-center justify-between">
                       <div className="flex items-center space-x-2.5">
-                        <span className="text-xs font-mono font-bold text-cyan-400">3º</span>
-                        <span className="font-mono font-bold text-sm text-white">SG001</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold">1 Convencional</span>
+                        <span className="text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400">3º</span>
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">SG001</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-100 text-cyan-800 dark:bg-slate-800 dark:text-slate-300 border border-cyan-300 dark:border-slate-700 font-semibold">1 Convencional</span>
                       </div>
-                      <span className="text-[10px] text-cyan-400 font-mono">Ciclo 1</span>
+                      <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono font-bold">Ciclo 1</span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-slate-950 border border-rose-500/40 flex items-center justify-between">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-rose-300 dark:border-rose-500/40 flex items-center justify-between">
                       <div className="flex items-center space-x-2.5">
-                        <span className="text-xs font-mono font-bold text-rose-400">4º</span>
-                        <span className="font-mono font-bold text-sm text-white">SP002</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold">1 Urgência (Reinicia)</span>
+                        <span className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400">4º</span>
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">SP002</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 font-semibold">1 Urgência (Reinicia)</span>
                       </div>
-                      <span className="text-[10px] text-rose-400 font-mono">Ciclo 2</span>
+                      <span className="text-[10px] text-rose-600 dark:text-rose-400 font-mono font-bold">Ciclo 2</span>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Resumo da Política Operacional */}
-              <div className="p-6 rounded-3xl bg-slate-950/70 border border-slate-800 space-y-3">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+              <div className="p-6 rounded-3xl bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-3">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wider block">
                   Resumo das Regras Ativas da Unidade:
                 </span>
-                <ul className="space-y-2 text-xs text-slate-400">
+                <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
                   <li className="flex items-center justify-between">
                     <span>Modo de Chamada Ativo:</span>
-                    <strong className="text-white">
+                    <strong className="text-slate-900 dark:text-white font-bold">
                       {attendanceOrderMode === 'PRIORITY' ? 'Prioridade Estrita' : 'Intercalado (1:1:1)'}
                     </strong>
                   </li>
                   <li className="flex items-center justify-between">
                     <span>Definição no Guichê do Atendente:</span>
-                    <strong className="text-cyan-400">
+                    <strong className="text-cyan-700 dark:text-cyan-400 font-bold">
                       Fixo (Apenas Leitura no Guichê)
                     </strong>
                   </li>
                   <li className="flex items-center justify-between">
                     <span>Chamada avulsa na Fila de Espera:</span>
-                    <strong className={allowManualQueueSelection ? 'text-emerald-400' : 'text-slate-500'}>
+                    <strong className={allowManualQueueSelection ? 'text-emerald-700 dark:text-emerald-400 font-bold' : 'text-slate-500'}>
                       {allowManualQueueSelection ? 'Sim (Habilitado)' : 'Não (Bloqueado)'}
                     </strong>
                   </li>
-                  <li className="flex items-center justify-between border-t border-slate-800/80 pt-2">
+                  <li className="flex items-center justify-between border-t border-slate-200 dark:border-slate-800/80 pt-2">
                     <span>Reset Automático:</span>
-                    <strong className={autoResetEnabled ? 'text-cyan-400 font-mono' : 'text-slate-500'}>
+                    <strong className={autoResetEnabled ? 'text-cyan-700 dark:text-cyan-400 font-mono font-bold' : 'text-slate-500'}>
                       {autoResetEnabled ? `Diário às ${autoResetTime}` : 'Desativado'}
                     </strong>
                   </li>
                   <li className="flex items-center justify-between">
                     <span>Reinício da Numeração:</span>
-                    <strong className="text-white font-mono">
+                    <strong className="text-slate-900 dark:text-white font-mono font-bold">
                       Inicia sempre do 001
                     </strong>
                   </li>
