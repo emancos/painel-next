@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from 'react'
 
-export function DigitalClock({ timezone = 'America/Sao_Paulo' }: { timezone?: string }) {
+export function DigitalClock({
+  timezone = 'America/Sao_Paulo',
+  theme = 'light',
+}: {
+  timezone?: string
+  theme?: 'light' | 'dark'
+}) {
   const [time, setTime] = useState<Date | null>(null)
 
   useEffect(() => {
@@ -14,11 +20,13 @@ export function DigitalClock({ timezone = 'America/Sao_Paulo' }: { timezone?: st
     return () => clearInterval(interval)
   }, [])
 
+  const isLight = theme === 'light'
+
   if (!time) {
     return (
       <div className="flex flex-col items-end opacity-50 animate-pulse">
-        <span className="text-3xl font-mono font-bold tracking-wider text-cyan-400">--:--:--</span>
-        <span className="text-xs uppercase tracking-widest text-slate-400">Carregando...</span>
+        <span className={`text-3xl font-mono font-bold tracking-wider ${isLight ? 'text-cyan-600' : 'text-cyan-400'}`}>--:--:--</span>
+        <span className={`text-xs uppercase tracking-widest ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Carregando...</span>
       </div>
     )
   }
@@ -51,14 +59,18 @@ export function DigitalClock({ timezone = 'America/Sao_Paulo' }: { timezone?: st
 
   return (
     <div className="flex flex-col items-end">
-      <div className="flex items-baseline space-x-1 font-mono text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-white drop-shadow-[0_0_15px_rgba(34,211,238,0.3)]">
-        <span className="text-cyan-400">{hours}</span>
-        <span className="text-slate-500 animate-pulse">:</span>
-        <span className="text-cyan-400">{minutes}</span>
-        <span className="text-slate-500 animate-pulse">:</span>
-        <span className="text-slate-400 text-2xl md:text-3xl">{seconds}</span>
+      <div className={`flex items-baseline space-x-1 font-mono text-3xl md:text-4xl lg:text-5xl font-black tracking-tight ${
+        isLight ? 'text-slate-900' : 'text-white drop-shadow-[0_0_15px_rgba(34,211,238,0.3)]'
+      }`}>
+        <span className={isLight ? 'text-cyan-600' : 'text-cyan-400'}>{hours}</span>
+        <span className={`${isLight ? 'text-slate-400' : 'text-slate-500'} animate-pulse`}>:</span>
+        <span className={isLight ? 'text-cyan-600' : 'text-cyan-400'}>{minutes}</span>
+        <span className={`${isLight ? 'text-slate-400' : 'text-slate-500'} animate-pulse`}>:</span>
+        <span className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-2xl md:text-3xl`}>{seconds}</span>
       </div>
-      <span className="text-xs md:text-sm font-medium tracking-wide text-slate-400 capitalize mt-0.5">
+      <span className={`text-xs md:text-sm font-medium tracking-wide capitalize mt-0.5 ${
+        isLight ? 'text-slate-600' : 'text-slate-400'
+      }`}>
         {formattedDate}
       </span>
     </div>
