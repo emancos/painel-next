@@ -138,7 +138,7 @@ export default function TriagemTotemPage() {
     if (n.includes('caixa') || n.includes('pagamento')) {
       return {
         icon: <CreditCard className="w-8 h-8 text-amber-500" />,
-        badgeClass: 'bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300',
+        badgeClass: 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 font-bold',
         cardClass: 'card-boom-amber',
         accentGradient: 'from-amber-500 to-orange-500',
       }
@@ -146,7 +146,7 @@ export default function TriagemTotemPage() {
     if (n.includes('triagem') || n.includes('doc')) {
       return {
         icon: <FileText className="w-8 h-8 text-emerald-500" />,
-        badgeClass: 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300',
+        badgeClass: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 font-bold',
         cardClass: 'card-boom-emerald',
         accentGradient: 'from-emerald-500 to-teal-500',
       }
@@ -154,14 +154,14 @@ export default function TriagemTotemPage() {
     if (n.includes('priorit')) {
       return {
         icon: <Sparkles className="w-8 h-8 text-purple-500" />,
-        badgeClass: 'bg-purple-500/15 border border-purple-500/30 text-purple-700 dark:text-purple-300',
+        badgeClass: 'bg-purple-100 text-purple-900 dark:bg-purple-500/15 dark:text-purple-300 border border-purple-300 dark:border-purple-500/30 font-bold',
         cardClass: 'card-boom-purple',
         accentGradient: 'from-purple-500 to-indigo-500',
       }
     }
     return {
       icon: <Layers className="w-8 h-8 text-cyan-500" />,
-      badgeClass: 'bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300',
+      badgeClass: 'bg-cyan-100 text-cyan-900 dark:bg-cyan-500/15 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/30 font-bold',
       cardClass: 'card-boom-cyan',
       accentGradient: 'from-cyan-500 to-blue-600',
     }
@@ -172,27 +172,27 @@ export default function TriagemTotemPage() {
     if (n.includes('especial') || n.includes('pcd') || n.includes('80')) {
       return {
         tag: '80+ • PCD • Mobilidade Reduzida',
-        activeClass: 'border-2 border-purple-500 bg-purple-500/15 dark:bg-purple-500/20 text-purple-900 dark:text-purple-200 shadow-[0_0_25px_rgba(168,85,247,0.3)] ring-2 ring-purple-500/30',
-        inactiveClass: 'border border-purple-200 dark:border-purple-900/40 bg-purple-50/50 dark:bg-slate-900/40 hover:border-purple-400',
+        activeClass: 'border-2 border-purple-500 bg-purple-50/90 dark:bg-purple-500/20 text-purple-950 dark:text-purple-200 shadow-md ring-2 ring-purple-500/30',
+        inactiveClass: 'border border-slate-200 dark:border-purple-900/40 bg-white dark:bg-slate-900/40 hover:border-purple-400',
         dotClass: 'bg-purple-500',
-        pillClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+        pillClass: 'bg-purple-100 text-purple-900 dark:bg-purple-500/20 dark:text-purple-300 border border-purple-300 dark:border-purple-500/30 font-bold',
       }
     }
     if (n.includes('priorit') || n.includes('60')) {
       return {
         tag: '60+ • Gestantes • Lactantes',
-        activeClass: 'border-2 border-amber-500 bg-amber-500/15 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200 shadow-[0_0_25px_rgba(245,158,11,0.3)] ring-2 ring-amber-500/30',
-        inactiveClass: 'border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-slate-900/40 hover:border-amber-400',
+        activeClass: 'border-2 border-amber-500 bg-amber-50/90 dark:bg-amber-500/20 text-amber-950 dark:text-amber-200 shadow-md ring-2 ring-amber-500/30',
+        inactiveClass: 'border border-slate-200 dark:border-amber-900/40 bg-white dark:bg-slate-900/40 hover:border-amber-400',
         dotClass: 'bg-amber-500',
-        pillClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+        pillClass: 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 font-bold',
       }
     }
     return {
       tag: 'Ordem de Chegada',
-      activeClass: 'border-2 border-cyan-500 bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-900 dark:text-cyan-200 shadow-[0_0_25px_rgba(6,182,212,0.3)] ring-2 ring-cyan-500/30',
-      inactiveClass: 'border border-cyan-200 dark:border-cyan-900/40 bg-cyan-50/50 dark:bg-slate-900/40 hover:border-cyan-400',
+      activeClass: 'border-2 border-cyan-500 bg-cyan-50/90 dark:bg-cyan-500/20 text-cyan-950 dark:text-cyan-200 shadow-md ring-2 ring-cyan-500/30',
+      inactiveClass: 'border border-slate-200 dark:border-cyan-900/40 bg-white dark:bg-slate-900/40 hover:border-cyan-400',
       dotClass: 'bg-cyan-500',
-      pillClass: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30',
+      pillClass: 'bg-cyan-100 text-cyan-900 dark:bg-cyan-500/20 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/30 font-bold',
     }
   }
 
@@ -362,7 +362,7 @@ export default function TriagemTotemPage() {
                     </div>
 
                     {isSelected && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-950 text-white font-extrabold uppercase tracking-wider shadow-xs">
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-black uppercase tracking-wider shadow-xs badge-selected">
                         Selecionado
                       </span>
                     )}
@@ -407,7 +407,7 @@ export default function TriagemTotemPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-mono text-cyan-600 dark:text-cyan-400 font-black px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20">
+                        <span className="text-xs font-mono text-cyan-800 dark:text-cyan-400 font-black px-2 py-0.5 rounded-md bg-cyan-100 dark:bg-cyan-500/10 border border-cyan-300 dark:border-cyan-500/20">
                           Prefixo: {s.prefix}
                         </span>
                       </div>
