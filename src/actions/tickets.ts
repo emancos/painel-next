@@ -657,7 +657,7 @@ export async function getPanelInitialData(unitId: string) {
     .where(eq(units.id, unitId))
     .limit(1)
 
-  // 2. Última senha chamada ativa
+  // 2. Última senha chamada ativa no momento
   const activeTickets = await db
     .select({
       id: tickets.id,
@@ -681,11 +681,66 @@ export async function getPanelInitialData(unitId: string) {
     .orderBy(desc(tickets.calledAt))
     .limit(6)
 
-  const current = activeTickets[0]
-  const history = activeTickets.slice(1).map((t) => ({
-    ...t,
-    locationFormatted: t.locationName && t.locationNumber !== null ? `${t.locationName} ${t.locationNumber.toString().padStart(2, '0')}` : 'Guichê',
-  }))
+  // 3. Chamadas anteriores concluídas recentemente (para histórico na TV)
+  const recentFinished = await db
+    .select({
+      id: ticketsHistory.id,
+      ticketPrefix: ticketsHistory.ticketPrefix,
+      ticketNumber: ticketsHistory.ticketNumber,
+      formattedTicket: ticketsHistory.formattedTicket,
+      customerName: ticketsHistory.customerName,
+      status: ticketsHistory.status,
+      calledAt: ticketsHistory.calledAt,
+      serviceName: services.name,
+      priorityName: priorities.name,
+      priorityColor: priorities.colorHex,
+      locationName: locations.name,
+      locationNumber: locations.number,
+    })
+    .from(ticketsHistory)
+    .innerJoin(services, eq(ticketsHistory.serviceId, services.id))
+    .innerJoin(priorities, eq(ticketsHistory.priorityId, priorities.id))
+    .leftJoin(locations, eq(ticketsHistory.locationId, locations.id))
+    .where(and(eq(ticketsHistory.unitId, unitId), sql`${ticketsHistory.calledAt} IS NOT NULL`))
+    .orderBy(desc(ticketsHistory.calledAt))
+    .limit(6)
+
+  const current = activeTickets[0] || (recentFinished.length > 0 ? recentFinished[0] : null)
+
+  // Candidatos ao histórico combinando ativos e finalizados
+  const rawHistoryCandidates = [
+    ...activeTickets.slice(activeTickets[0] ? 1 : 0),
+    ...recentFinished.slice(!activeTickets[0] && recentFinished[0] ? 1 : 0),
+  ]
+
+  // Ordena decrescente por horário em que foram chamadas
+  rawHistoryCandidates.sort((a, b) => {
+    const timeA = a.calledAt ? new Date(a.calledAt).getTime() : 0
+    const timeB = b.calledAt ? new Date(b.calledAt).getTime() : 0
+    return timeB - timeA
+  })
+
+  // Deduplica rigorosamente por formattedTicket e id, e garante que o current não se repita
+  const seenKeys = new Set<string>()
+  if (current) {
+    seenKeys.add(current.id)
+    seenKeys.add(current.formattedTicket)
+  }
+
+  const history = rawHistoryCandidates
+    .filter((t) => {
+      if (seenKeys.has(t.id) || seenKeys.has(t.formattedTicket)) {
+        return false
+      }
+      seenKeys.add(t.id)
+      seenKeys.add(t.formattedTicket)
+      return true
+    })
+    .slice(0, 5)
+    .map((t) => ({
+      ...t,
+      locationFormatted: t.locationName && t.locationNumber !== null ? `${t.locationName} ${t.locationNumber.toString().padStart(2, '0')}` : 'Guichê',
+    }))
 
   return {
     unit: unit || { name: 'Unidade Principal', code: 'UNI01' },

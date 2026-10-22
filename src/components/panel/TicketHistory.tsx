@@ -36,7 +36,7 @@ export function TicketHistory({ history }: TicketHistoryProps) {
           ) : (
             history.map((item, index) => (
               <motion.div
-                key={item.id}
+                key={item.formattedTicket || item.id}
                 layout
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1 - index * 0.12, x: 0 }}

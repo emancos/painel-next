@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, useRef, use } from 'react'
 import { FeaturedTicket, FeaturedTicketData } from '@/components/panel/FeaturedTicket'
 import { TicketHistory, HistoryTicketItem } from '@/components/panel/TicketHistory'
 import { DigitalClock } from '@/components/panel/DigitalClock'
@@ -37,6 +37,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
   const resolvedParams = use(params)
   const unitId = resolvedParams.unitId
 
+  const currentTicketRef = useRef<FeaturedTicketData | null>(null)
   const [currentTicket, setCurrentTicket] = useState<FeaturedTicketData | null>(null)
   const [history, setHistory] = useState<HistoryTicketItem[]>([])
   const [isConnected, setIsConnected] = useState(false)
@@ -78,10 +79,22 @@ export default function TVPanelPage({ params }: PanelPageProps) {
         if (data.unit?.logoUrl) setUnitLogoUrl(data.unit.logoUrl)
         if (data.unit?.timezone) setUnitTimezone(data.unit.timezone)
         if (data.currentTicket) {
+          currentTicketRef.current = data.currentTicket
           setCurrentTicket(data.currentTicket)
         }
-        if (data.history) {
-          setHistory(data.history)
+        if (data.history && Array.isArray(data.history)) {
+          const currentId = data.currentTicket?.id
+          const currentFormatted = data.currentTicket?.formattedTicket
+          const seen = new Set<string>()
+          const initialHistory = (data.history as HistoryTicketItem[]).filter((item) => {
+            if (currentId && item.id === currentId) return false
+            if (currentFormatted && item.formattedTicket === currentFormatted) return false
+            const key = item.formattedTicket || item.id
+            if (seen.has(key)) return false
+            seen.add(key)
+            return true
+          }).slice(0, 5)
+          setHistory(initialHistory)
         }
       })
       .catch((err) => console.warn('Aviso: Carregando painel sem dados prévios:', err))
@@ -118,23 +131,59 @@ export default function TVPanelPage({ params }: PanelPageProps) {
             locationShort: payload.ticket.locationShort,
           }
 
-          // Atualiza histórico empurrando o anterior
-          setCurrentTicket((prev) => {
-            if (prev) {
-              setHistory((old) => [
-                {
-                  id: prev.id,
-                  formattedTicket: prev.formattedTicket,
-                  serviceName: prev.serviceName,
-                  priorityName: prev.priorityName,
-                  priorityColor: prev.priorityColor,
-                  locationFormatted: prev.locationFormatted,
-                  calledAt: new Date(),
-                },
-                ...old.slice(0, 5),
-              ])
+          const prev = currentTicketRef.current
+
+          // Verifica se é a mesma senha que já está na tela principal (rechamada)
+          const isSameTicket = Boolean(
+            prev &&
+              (prev.id === newTicket.id ||
+                prev.formattedTicket === newTicket.formattedTicket)
+          )
+
+          // Atualiza a referência e o estado do ticket principal em destaque
+          currentTicketRef.current = newTicket
+          setCurrentTicket(newTicket)
+
+          // Atualiza o histórico de forma atômica e pura, garantindo que não haja multiplicações
+          setHistory((prevHistory) => {
+            // Se for rechamada da mesma senha, NÃO empurra para o histórico
+            if (isSameTicket) {
+              return prevHistory
+                .filter(
+                  (item) =>
+                    item.id !== newTicket.id &&
+                    item.formattedTicket !== newTicket.formattedTicket
+                )
+                .slice(0, 5)
             }
-            return newTicket
+
+            // Se for uma nova senha:
+            // 1. Remove qualquer duplicata da nova senha ou do ticket anterior
+            const filtered = prevHistory.filter((item) => {
+              if (item.id === newTicket.id || item.formattedTicket === newTicket.formattedTicket) {
+                return false
+              }
+              if (prev && (item.id === prev.id || item.formattedTicket === prev.formattedTicket)) {
+                return false
+              }
+              return true
+            })
+
+            // 2. Se existia uma senha anterior em exibição no destaque, ela desce para as últimas chamadas
+            if (prev) {
+              const retiredTicket: HistoryTicketItem = {
+                id: prev.id,
+                formattedTicket: prev.formattedTicket,
+                serviceName: prev.serviceName,
+                priorityName: prev.priorityName,
+                priorityColor: prev.priorityColor,
+                locationFormatted: prev.locationFormatted,
+                calledAt: new Date(),
+              }
+              return [retiredTicket, ...filtered].slice(0, 5)
+            }
+
+            return filtered.slice(0, 5)
           })
 
           // Efeito de flash na tela
