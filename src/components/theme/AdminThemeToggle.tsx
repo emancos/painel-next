@@ -10,12 +10,13 @@ export function AdminThemeToggle() {
   useEffect(() => {
     setMounted(true)
     const stored = localStorage.getItem('admin_theme')
-    if (stored === 'light' || stored === 'dark') {
-      setTheme(stored)
-      document.documentElement.setAttribute('data-admin-theme', stored)
+    const activeTheme = (stored === 'light' || stored === 'dark') ? stored : 'dark'
+    setTheme(activeTheme)
+    document.documentElement.setAttribute('data-admin-theme', activeTheme)
+    if (activeTheme === 'dark') {
+      document.documentElement.classList.add('dark')
     } else {
-      setTheme('dark')
-      document.documentElement.setAttribute('data-admin-theme', 'dark')
+      document.documentElement.classList.remove('dark')
     }
   }, [])
 
@@ -25,6 +26,11 @@ export function AdminThemeToggle() {
     try {
       localStorage.setItem('admin_theme', nextTheme)
       document.documentElement.setAttribute('data-admin-theme', nextTheme)
+      if (nextTheme === 'dark') {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
       window.dispatchEvent(new CustomEvent('admin-theme-changed', { detail: nextTheme }))
     } catch (e) {}
   }
