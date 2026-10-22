@@ -46,6 +46,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
   const [unitName, setUnitName] = useState('Unidade de Atendimento')
   const [unitSubtitle, setUnitSubtitle] = useState<string | null>(null)
   const [unitLogoUrl, setUnitLogoUrl] = useState<string | null>(null)
+  const [unitTimezone, setUnitTimezone] = useState<string>('America/Sao_Paulo')
 
   // Desbloqueio e ativação do áudio (exigido por navegadores modernos)
   const handleEnableAudio = () => {
@@ -75,6 +76,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
         if (data.unit?.name) setUnitName(data.unit.name)
         if (data.unit?.subtitle) setUnitSubtitle(data.unit.subtitle)
         if (data.unit?.logoUrl) setUnitLogoUrl(data.unit.logoUrl)
+        if (data.unit?.timezone) setUnitTimezone(data.unit.timezone)
         if (data.currentTicket) {
           setCurrentTicket(data.currentTicket)
         }
@@ -218,7 +220,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
             {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
           </button>
 
-          <DigitalClock />
+          <DigitalClock timezone={unitTimezone} />
         </div>
       </header>
 

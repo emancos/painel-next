@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 
-export function DigitalClock() {
+export function DigitalClock({ timezone = 'America/Sao_Paulo' }: { timezone?: string }) {
   const [time, setTime] = useState<Date | null>(null)
 
   useEffect(() => {
@@ -23,11 +23,24 @@ export function DigitalClock() {
     )
   }
 
-  const hours = time.getHours().toString().padStart(2, '0')
-  const minutes = time.getMinutes().toString().padStart(2, '0')
-  const seconds = time.getSeconds().toString().padStart(2, '0')
+  // Formata o horário respeitando o timezone configurado para a unidade
+  const tz = timezone || 'America/Sao_Paulo'
+
+  const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: tz,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+
+  const parts = timeFormatter.formatToParts(time)
+  const hours = parts.find((p) => p.type === 'hour')?.value || '00'
+  const minutes = parts.find((p) => p.type === 'minute')?.value || '00'
+  const seconds = parts.find((p) => p.type === 'second')?.value || '00'
 
   const dateStr = time.toLocaleDateString('pt-BR', {
+    timeZone: tz,
     weekday: 'long',
     day: 'numeric',
     month: 'long',
