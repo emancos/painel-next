@@ -142,6 +142,26 @@ export default function AtendimentoPage() {
     allowManualQueueSelection: true,
   })
 
+  // Timer de atendimento em tempo real
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
+  useEffect(() => {
+    if (!currentTicket) {
+      setElapsedSeconds(0)
+      return
+    }
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [currentTicket?.id])
+
+  const formatElapsed = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0')
+    const s = (sec % 60).toString().padStart(2, '0')
+    return `${m}:${s}`
+  }
+
   // 1. Verifica autenticação do usuário e permissão de acesso
   useEffect(() => {
     getSessionAction().then((u) => {
@@ -499,52 +519,63 @@ export default function AtendimentoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8 justify-between admin-page-container transition-colors duration-200">
+    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8 justify-between admin-page-container transition-colors duration-200 relative overflow-hidden">
+      {/* Luzes de Fundo Ambientais */}
+      <div className="mesh-orb-cyan -top-24 -left-24 w-96 h-96 opacity-40 dark:opacity-30 pointer-events-none" />
+      <div className="mesh-orb-emerald top-1/2 -right-24 w-[450px] h-[450px] opacity-35 dark:opacity-20 pointer-events-none" />
+      <div className="mesh-orb-indigo -bottom-24 left-1/3 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none" />
+
       {/* Topo do Módulo do Atendente */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-800 gap-4 mb-6">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4 mb-6 z-10">
         <div className="flex items-center space-x-4">
           <Link
             href="/"
-            className="h-11 w-11 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors flex items-center justify-center shrink-0"
+            className="h-11 w-11 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all flex items-center justify-center shrink-0 shadow-xs hover:scale-105"
             title="Voltar ao Hub"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              Painel do Atendente <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Operador Conectado</span>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              Painel do Atendente{' '}
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold shadow-xs">
+                Operador Conectado
+              </span>
             </h1>
-            <p className="text-xs md:text-sm text-slate-400">
+            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
               {unit?.name || 'Unidade Central Matriz'} • Gestão de Fila e Chamadas
             </p>
           </div>
         </div>
 
         {/* Controles de Topo: Botão Admin (se ADMIN), Seletor de Guichê e Usuário */}
-        <div className="flex items-center space-x-3 shrink-0">
+        <div className="flex items-center space-x-3 shrink-0 flex-wrap gap-y-2">
           {/* Alternador de Tema Claro / Escuro (Admin/Sistema) */}
           <AdminThemeToggle />
-          {/* Requisito 5: Atalho para Admin caso o usuário logado tenha perfil ADMIN */}
+
+          {/* Atalho para Admin caso o usuário logado tenha perfil ADMIN */}
           {currentUser.role === 'ADMIN' && (
             <Link
               href="/admin"
-              className="h-11 px-4 rounded-2xl bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/30 font-bold text-xs transition-all shadow-sm shadow-cyan-500/10 active:scale-95 flex items-center space-x-2 shrink-0"
+              className="h-11 px-4 rounded-2xl bg-cyan-500/15 hover:bg-cyan-500 text-cyan-700 dark:text-cyan-300 hover:text-slate-950 border border-cyan-500/30 font-bold text-xs transition-all shadow-xs active:scale-95 flex items-center space-x-2 shrink-0"
               title="Acessar Painel Administrativo Global"
             >
-              <ShieldCheck className="w-4 h-4" />
+              <ShieldCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
               <span>Painel Admin</span>
             </Link>
           )}
 
-          <div className="h-11 px-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center space-x-2.5 shrink-0">
-            <User className="w-4 h-4 text-cyan-400" />
+          <div className="h-11 px-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 flex items-center space-x-2.5 shrink-0 shadow-xs">
+            <div className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 flex items-center justify-center font-bold text-xs">
+              {currentUser.name.charAt(0)}
+            </div>
             <div className="text-left text-xs leading-tight">
-              <span className="font-bold text-white block truncate max-w-[120px]">{currentUser.name}</span>
-              <span className="text-[10px] text-cyan-400 font-mono">{currentUser.role}</span>
+              <span className="font-bold text-slate-900 dark:text-white block truncate max-w-[120px]">{currentUser.name}</span>
+              <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono">{currentUser.role}</span>
             </div>
             <button
               onClick={handleLogout}
-              className="p-1.5 text-slate-400 hover:text-rose-400 ml-1 transition-colors"
+              className="p-1.5 text-slate-400 hover:text-rose-500 ml-1 transition-colors"
               title="Encerrar Turno (Logout)"
             >
               <LogOut className="w-4 h-4" />
@@ -557,7 +588,7 @@ export default function AtendimentoPage() {
               <select
                 value={selectedLocationId}
                 onChange={(e) => setSelectedLocationId(e.target.value)}
-                className="h-11 px-4 rounded-2xl bg-slate-900 border border-slate-700 text-cyan-300 font-bold text-sm focus:outline-none focus:border-cyan-500 shrink-0"
+                className="h-11 px-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-cyan-300 font-bold text-sm focus:outline-none focus:border-cyan-500 shrink-0 shadow-xs"
               >
                 {userLocations.map((loc) => (
                   <option key={loc.id} value={loc.id}>
@@ -567,22 +598,22 @@ export default function AtendimentoPage() {
               </select>
             </div>
           ) : selectedLocation ? (
-            <div className="h-11 px-4 rounded-2xl bg-cyan-950/60 border border-cyan-800/80 text-cyan-300 flex items-center space-x-2.5 shrink-0 shadow-sm">
-              <DoorOpen className="w-4 h-4 text-cyan-400 shrink-0" />
+            <div className="h-11 px-4 rounded-2xl bg-cyan-500/15 border border-cyan-500/35 text-cyan-800 dark:text-cyan-300 flex items-center space-x-2.5 shrink-0 shadow-xs">
+              <DoorOpen className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
               <div className="text-left leading-tight">
-                <span className="font-mono font-bold text-sm text-white block">
+                <span className="font-mono font-bold text-sm text-slate-900 dark:text-white block">
                   {selectedLocation.name} {selectedLocation.number.toString().padStart(2, '0')}
                 </span>
                 {selectedLocation.roomName && (
-                  <span className="text-[10px] text-cyan-400/90 block font-medium">
+                  <span className="text-[10px] text-cyan-600 dark:text-cyan-400/90 block font-medium">
                     {selectedLocation.roomName}
                   </span>
                 )}
               </div>
             </div>
           ) : (
-            <div className="h-11 px-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center space-x-2 shrink-0">
-              <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
+            <div className="h-11 px-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center space-x-2 shrink-0">
+              <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
               <span>Sem posto vinculado</span>
             </div>
           )}
@@ -590,13 +621,13 @@ export default function AtendimentoPage() {
       </header>
 
       {/* Sub-navegação Operacional: Fila & Chamadas | Fichas em Espera | Histórico */}
-      <div className="flex items-center space-x-2 my-5 border-b border-slate-800 pb-3 overflow-x-auto">
+      <div className="flex items-center space-x-2 my-5 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto z-10">
         <button
           onClick={() => setActiveView('CALLING')}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all shrink-0 ${
             activeView === 'CALLING'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900'
           }`}
         >
           <Megaphone className="w-4 h-4" />
@@ -605,17 +636,17 @@ export default function AtendimentoPage() {
 
         <button
           onClick={() => setActiveView('PENDING')}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all shrink-0 ${
             activeView === 'PENDING'
-              ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-orange-500 text-slate-950 shadow-md shadow-amber-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900'
           }`}
         >
           <PauseCircle className="w-4 h-4" />
           <span>Fichas em Espera</span>
           {pendingTickets.length > 0 && (
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
-              activeView === 'PENDING' ? 'bg-slate-950 text-amber-300' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              activeView === 'PENDING' ? 'bg-slate-950 text-amber-300' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30'
             }`}>
               {pendingTickets.length}
             </span>
@@ -624,10 +655,10 @@ export default function AtendimentoPage() {
 
         <button
           onClick={() => setActiveView('HISTORY')}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all shrink-0 ${
             activeView === 'HISTORY'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900'
           }`}
         >
           <History className="w-4 h-4" />
@@ -637,9 +668,9 @@ export default function AtendimentoPage() {
 
       {/* Notificação / Mensagem de Status */}
       {statusMessage && (
-        <div className="p-3.5 rounded-2xl bg-cyan-950/70 border border-cyan-800 text-cyan-300 text-xs font-semibold flex items-center justify-between mb-4 animate-fade-in">
+        <div className="p-3.5 rounded-2xl bg-cyan-500/15 border border-cyan-500/35 text-cyan-800 dark:text-cyan-300 text-xs font-bold flex items-center justify-between mb-4 animate-fade-in shadow-xs z-10">
           <span>{statusMessage}</span>
-          <button onClick={() => setStatusMessage(null)} className="text-xs hover:underline text-cyan-400">Fechar</button>
+          <button onClick={() => setStatusMessage(null)} className="text-xs hover:underline text-cyan-600 dark:text-cyan-400 font-bold">Fechar</button>
         </div>
       )}
 
@@ -647,245 +678,262 @@ export default function AtendimentoPage() {
           VISÃO 1: ATENDIMENTO ATIVO E FILA DE ESPERA
          ======================================================== */}
       {activeView === 'CALLING' && (
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 mb-6">
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 mb-6 z-10">
           {/* Lado Esquerdo: Senha em Atendimento e Controles Principais (7 Colunas) */}
           <div className="lg:col-span-7 flex flex-col space-y-6">
             {!selectedLocation ? (
-              <div className="flex-1 rounded-3xl p-8 bg-slate-900/60 border border-slate-800 flex flex-col items-center justify-center text-center space-y-4">
-                <div className="w-16 h-16 rounded-3xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <div className="card-boom p-8 flex flex-col items-center justify-center text-center space-y-4 flex-1">
+                <div className="w-16 h-16 rounded-3xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500">
                   <MapPin className="w-8 h-8 animate-pulse" />
                 </div>
                 <div className="space-y-2 max-w-md">
-                  <h3 className="text-xl font-bold text-white">Nenhum Posto Vinculado</h3>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    Olá, <strong className="text-cyan-400">{currentUser.name}</strong>. Seu usuário ainda não foi associado a nenhuma Mesa, Guichê ou Sala de Atendimento.
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Nenhum Posto Vinculado</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Olá, <strong className="text-cyan-600 dark:text-cyan-400">{currentUser.name}</strong>. Seu usuário ainda não foi associado a nenhuma Mesa, Guichê ou Sala de Atendimento.
                   </p>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                     Solicite ao administrador da unidade para associar seu usuário ao posto correspondente na opção <strong>&ldquo;Mesas e Guichês na Unidade&rdquo;</strong> do Painel de Administração.
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="flex-1 rounded-3xl p-8 bg-slate-900/60 border border-slate-800 flex flex-col justify-between relative overflow-hidden">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Posto: <span className="text-cyan-400 font-mono text-sm">{selectedLocation.name} {selectedLocation.number.toString().padStart(2, '0')}{selectedLocation.roomName ? ` (${selectedLocation.roomName})` : ''}</span>
+              <div className="card-boom card-boom-cyan p-8 flex flex-col justify-between relative overflow-hidden flex-1">
+                {/* Aura de Iluminação Radial do Miolo */}
+                <div className="absolute inset-0 m-auto w-80 h-80 rounded-full bg-cyan-400/10 dark:bg-cyan-500/15 blur-3xl pointer-events-none" />
+
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2 z-10">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <DoorOpen className="w-4 h-4 text-cyan-500" />
+                    <span>Posto:</span>{' '}
+                    <span className="text-cyan-700 dark:text-cyan-300 font-mono text-sm font-bold">
+                      {selectedLocation.name} {selectedLocation.number.toString().padStart(2, '0')}
+                      {selectedLocation.roomName ? ` (${selectedLocation.roomName})` : ''}
+                    </span>
                   </span>
-                {currentTicket && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {/* Indicador de Reprodução na Tela da TV */}
-                    {(() => {
-                      const broadcastStatus = (currentTicket.metadata as any)?.broadcastStatus
-                      if (broadcastStatus === 'PLAYING') {
+
+                  {currentTicket && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Indicador de Reprodução na Tela da TV */}
+                      {(() => {
+                        const broadcastStatus = (currentTicket.metadata as any)?.broadcastStatus
+                        if (broadcastStatus === 'PLAYING') {
+                          return (
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 animate-pulse shadow-xs">
+                              <Volume2 className="w-3.5 h-3.5 text-emerald-500 animate-bounce" />
+                              <span>Reproduzindo na TV</span>
+                            </span>
+                          )
+                        }
+                        if (broadcastStatus === 'PLAYED') {
+                          return (
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 shadow-xs">
+                              <CheckCircle className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                              <span>Anunciada na TV</span>
+                            </span>
+                          )
+                        }
                         return (
-                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 animate-pulse shadow-sm shadow-emerald-500/20">
-                            <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-bounce" />
-                            <span>Reproduzindo na TV</span>
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1.5 animate-pulse shadow-xs">
+                            <Clock className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+                            <span>Na fila da TV (Aguardando...)</span>
                           </span>
                         )
-                      }
-                      if (broadcastStatus === 'PLAYED') {
-                        return (
-                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-cyan-950 text-cyan-300 border border-cyan-800/80 flex items-center gap-1.5">
-                            <CheckCircle className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>Anunciada na TV</span>
-                          </span>
-                        )
-                      }
-                      return (
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 animate-pulse">
-                          <Clock className="w-3.5 h-3.5 text-amber-400 animate-spin" />
-                          <span>Na fila da TV (Aguardando...)</span>
-                        </span>
-                      )
-                    })()}
+                      })()}
 
-                    <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                      currentTicket.status === 'IN_PROGRESS' 
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
-                        : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                    }`}>
-                      {currentTicket.status === 'IN_PROGRESS' ? 'Em Atendimento' : 'Chamado (Aguardando)'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {currentTicket ? (
-                <div className="my-auto text-center space-y-3">
-                  <span className="text-xs font-mono text-slate-400 uppercase tracking-widest block">
-                    Senha Atual
-                  </span>
-                  <div className="font-mono text-7xl md:text-8xl font-black text-cyan-400 tracking-tight drop-shadow-[0_0_25px_rgba(6,182,212,0.3)]">
-                    {currentTicket.formattedTicket}
-                  </div>
-
-                  <div className="flex items-center justify-center space-x-2 pt-2 flex-wrap gap-y-2">
-                    <span
-                      className="px-3.5 py-1 rounded-full text-xs font-bold text-white uppercase tracking-wider"
-                      style={{ backgroundColor: currentTicket.priorityColor }}
-                    >
-                      {currentTicket.priorityName}
-                    </span>
-                    <span className="px-3 py-1 rounded-full text-xs bg-slate-800 text-slate-300 border border-slate-700">
-                      {currentTicket.serviceName}
-                    </span>
-                  </div>
-
-                  {/* Banner de Status de Transmissão na TV */}
-                  <div className="pt-1">
-                    {(() => {
-                      const broadcastStatus = (currentTicket.metadata as any)?.broadcastStatus
-                      if (broadcastStatus === 'PLAYING') {
-                        return (
-                          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold shadow-md shadow-emerald-500/10 animate-pulse">
-                            <Volume2 className="w-4 h-4 text-emerald-400 animate-bounce" />
-                            <span>Esta senha está em exibição grande e sendo anunciada na TV neste momento.</span>
-                          </div>
-                        )
-                      }
-                      if (broadcastStatus === 'PLAYED') {
-                        return (
-                          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-slate-950/70 border border-slate-800 text-slate-300 text-xs font-medium">
-                            <CheckCircle className="w-4 h-4 text-cyan-400" />
-                            <span>Senha já exibida e anunciada na TV com sucesso.</span>
-                          </div>
-                        )
-                      }
-                      return (
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold animate-pulse">
-                          <Clock className="w-4 h-4 text-amber-400 animate-spin" />
-                          <span>Na fila da TV: aguardando outras chamadas concluírem o tempo de tela.</span>
-                        </div>
-                      )
-                    })()}
-                  </div>
-
-                  {currentTicket.customerName && (
-                    <p className="text-sm font-semibold text-slate-300 pt-1">
-                      Cidadão: <span className="text-white capitalize">{currentTicket.customerName}</span>
-                    </p>
+                      <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-xs ${
+                        currentTicket.status === 'IN_PROGRESS' 
+                          ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40' 
+                          : 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border border-cyan-500/40'
+                      }`}>
+                        {currentTicket.status === 'IN_PROGRESS' ? 'Em Atendimento' : 'Chamado (Aguardando)'}
+                      </span>
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div className="my-auto text-center p-8 space-y-3 text-slate-500">
-                  <Tag className="w-12 h-12 mx-auto text-slate-700 animate-pulse" />
-                  <h3 className="text-xl font-bold text-slate-400">Posto Disponível</h3>
-                  <p className="text-xs max-w-sm mx-auto">
-                    Operador <strong className="text-cyan-400">{currentUser.name}</strong>, clique no botão abaixo para chamar a próxima senha da fila.
-                  </p>
-                </div>
-              )}
 
-              {/* Indicador Informativo do Modo de Chamada Configurado pelo Administrador */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-2xl bg-slate-950/70 border border-slate-800/80 mb-3 gap-2">
-                <div className="flex items-center space-x-2">
-                  <Shuffle className="w-4 h-4 text-cyan-400" />
-                  <span className="text-xs font-bold text-slate-300">Modo de Chamada:</span>
-                </div>
-
-                <div>
-                  {attendanceConfig.defaultOrderMode === 'INTERLEAVED' ? (
-                    <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-amber-400" />
-                      Intercalado (1 Urgência, 1 Prioritário, 1 Convencional)
+                {currentTicket ? (
+                  <div className="my-auto text-center space-y-4 z-10 py-4">
+                    <span className="text-xs font-mono text-slate-500 dark:text-slate-400 uppercase tracking-widest block font-bold">
+                      Senha Atual em Atendimento
                     </span>
-                  ) : (
-                    <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                      Prioridade Estrita (Urgência &gt; Prioritário &gt; Convencional)
-                    </span>
-                  )}
-                </div>
-              </div>
 
-              {/* Botões de Ação do Atendimento */}
-              <div className="pt-2 border-t border-slate-800 space-y-3">
-                {!currentTicket ? (
-                  <button
-                    onClick={handleCallNext}
-                    disabled={isPending || waitingQueue.length === 0}
-                    className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-lg flex items-center justify-center space-x-3 transition-all shadow-xl shadow-cyan-500/25 active:scale-[0.99] disabled:opacity-40"
-                  >
-                    <Megaphone className="w-6 h-6" />
-                    <span>CHAMAR PRÓXIMA SENHA</span>
-                  </button>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <button
-                      onClick={handleRecall}
-                      disabled={isPending}
-                      className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs flex flex-col items-center justify-center gap-1 border border-slate-700 transition-colors"
-                      title="Chamar novamente no painel e falar voz"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>Rechamar</span>
-                    </button>
+                    {/* Número Gigante da Senha com Gradiente e Contraste Impressionante */}
+                    <div className="font-mono text-7xl sm:text-8xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-700 dark:from-cyan-400 dark:via-sky-300 dark:to-emerald-400 tracking-tight leading-none drop-shadow-[0_4px_16px_rgba(8,145,178,0.2)] dark:drop-shadow-[0_0_40px_rgba(6,182,212,0.4)]">
+                      {currentTicket.formattedTicket}
+                    </div>
 
-                    {currentTicket.status !== 'IN_PROGRESS' ? (
-                      <button
-                        onClick={handleStartAttendance}
-                        disabled={isPending}
-                        className="p-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 shadow-md transition-colors"
+                    <div className="flex items-center justify-center space-x-2.5 pt-1 flex-wrap gap-y-2">
+                      <span
+                        className="px-4 py-1 rounded-full text-xs font-black text-white uppercase tracking-wider shadow-sm"
+                        style={{ backgroundColor: currentTicket.priorityColor || '#06B6D4' }}
                       >
-                        <Play className="w-4 h-4" />
-                        <span>Iniciar</span>
-                      </button>
-                    ) : (
-                      /* Requisito 2: Finalizar com modal de serviço, resolução e observação */
-                      <button
-                        onClick={handleOpenFinishModal}
-                        disabled={isPending}
-                        className="p-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex flex-col items-center justify-center gap-1 shadow-md transition-colors"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Finalizar</span>
-                      </button>
+                        {currentTicket.priorityName}
+                      </span>
+                      <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 shadow-2xs">
+                        {currentTicket.serviceName}
+                      </span>
+                    </div>
+
+                    {/* Tempo de Atendimento Decorrido */}
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 shadow-xs">
+                      <Clock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                      <span>{currentTicket.status === 'IN_PROGRESS' ? 'Em atendimento há' : 'Chamado há'}: {formatElapsed(elapsedSeconds)}</span>
+                    </div>
+
+                    {/* Banner de Status de Transmissão na TV */}
+                    <div>
+                      {(() => {
+                        const broadcastStatus = (currentTicket.metadata as any)?.broadcastStatus
+                        if (broadcastStatus === 'PLAYING') {
+                          return (
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-800 dark:text-emerald-300 text-xs font-bold shadow-xs animate-pulse">
+                              <Volume2 className="w-4 h-4 text-emerald-500 animate-bounce" />
+                              <span>Esta senha está em exibição grande e sendo anunciada na TV neste momento.</span>
+                            </div>
+                          )
+                        }
+                        if (broadcastStatus === 'PLAYED') {
+                          return (
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium shadow-2xs">
+                              <CheckCircle className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                              <span>Senha já exibida e anunciada na TV com sucesso.</span>
+                            </div>
+                          )
+                        }
+                        return (
+                          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-amber-500/15 border border-amber-500/35 text-amber-800 dark:text-amber-300 text-xs font-bold animate-pulse shadow-xs">
+                            <Clock className="w-4 h-4 text-amber-500 animate-spin" />
+                            <span>Na fila da TV: aguardando outras chamadas concluírem o tempo de tela.</span>
+                          </div>
+                        )
+                      })()}
+                    </div>
+
+                    {currentTicket.customerName && (
+                      <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 pt-1">
+                        Cidadão: <span className="text-slate-900 dark:text-white font-bold capitalize">{currentTicket.customerName}</span>
+                      </p>
                     )}
-
-                    {/* Requisito 3: Redirecionar atendimento em caso de erro na triagem */}
-                    <button
-                      onClick={handleOpenRedirectModal}
-                      disabled={isPending}
-                      className="p-3 rounded-xl bg-indigo-950/70 hover:bg-indigo-900/90 text-indigo-300 font-bold text-xs flex flex-col items-center justify-center gap-1 border border-indigo-800/60 transition-colors"
-                      title="Redirecionar para outro serviço ou local"
-                    >
-                      <ArrowRightLeft className="w-4 h-4" />
-                      <span>Redirecionar</span>
-                    </button>
-
-                    <button
-                      onClick={handleNoShow}
-                      disabled={isPending}
-                      className="p-3 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 font-bold text-xs flex flex-col items-center justify-center gap-1 border border-rose-800/60 transition-colors"
-                      title="Marcar senha como não compareceu"
-                    >
-                      <UserX className="w-4 h-4" />
-                      <span>Não Veio</span>
-                    </button>
+                  </div>
+                ) : (
+                  <div className="my-auto text-center p-8 space-y-3 text-slate-400 dark:text-slate-500 z-10">
+                    <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700/60 flex items-center justify-center mx-auto text-cyan-600 dark:text-cyan-400 shadow-sm animate-pulse">
+                      <Tag className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300">Posto Disponível</h3>
+                    <p className="text-xs max-w-sm mx-auto text-slate-500 dark:text-slate-400">
+                      Operador <strong className="text-cyan-600 dark:text-cyan-400 font-bold">{currentUser.name}</strong>, clique no botão abaixo para chamar a próxima senha da fila.
+                    </p>
                   </div>
                 )}
+
+                {/* Indicador Informativo do Modo de Chamada */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800/80 mb-4 gap-2 z-10 shadow-2xs">
+                  <div className="flex items-center space-x-2">
+                    <Shuffle className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Modo de Chamada:</span>
+                  </div>
+
+                  <div>
+                    {attendanceConfig.defaultOrderMode === 'INTERLEAVED' ? (
+                      <span className="text-xs font-bold px-3 py-1 rounded-xl bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1.5 shadow-2xs">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        Intercalado (1 Urgência, 1 Prioritário, 1 Convencional)
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold px-3 py-1 rounded-xl bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 shadow-2xs">
+                        <span className="w-2 h-2 rounded-full bg-cyan-500" />
+                        Prioridade Estrita (Urgência &gt; Prioritário &gt; Convencional)
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Botões de Ação do Atendimento */}
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3 z-10">
+                  {!currentTicket ? (
+                    <button
+                      onClick={handleCallNext}
+                      disabled={isPending || waitingQueue.length === 0}
+                      className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-lg flex items-center justify-center space-x-3 transition-all shadow-xl shadow-cyan-500/25 active:scale-[0.99] disabled:opacity-40 btn-boom"
+                    >
+                      <Megaphone className="w-6 h-6" />
+                      <span>CHAMAR PRÓXIMA SENHA</span>
+                    </button>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      <button
+                        onClick={handleRecall}
+                        disabled={isPending}
+                        className="p-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-cyan-700 dark:text-cyan-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1.5 border border-slate-300 dark:border-slate-700 transition-all active:scale-95 shadow-xs"
+                        title="Chamar novamente no painel e falar voz"
+                      >
+                        <RotateCcw className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                        <span>Rechamar</span>
+                      </button>
+
+                      {currentTicket.status !== 'IN_PROGRESS' ? (
+                        <button
+                          onClick={handleStartAttendance}
+                          disabled={isPending}
+                          className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex flex-col items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all active:scale-95 btn-boom"
+                        >
+                          <Play className="w-4 h-4" />
+                          <span>Iniciar</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleOpenFinishModal}
+                          disabled={isPending}
+                          className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs flex flex-col items-center justify-center gap-1.5 shadow-md shadow-emerald-500/30 transition-all active:scale-95 btn-boom"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Finalizar</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={handleOpenRedirectModal}
+                        disabled={isPending}
+                        className="p-3.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/90 text-indigo-700 dark:text-indigo-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800/60 transition-all active:scale-95 shadow-xs"
+                        title="Redirecionar para outro serviço ou local"
+                      >
+                        <ArrowRightLeft className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        <span>Redirecionar</span>
+                      </button>
+
+                      <button
+                        onClick={handleNoShow}
+                        disabled={isPending}
+                        className="p-3.5 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/80 text-rose-700 dark:text-rose-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1.5 border border-rose-200 dark:border-rose-800/60 transition-all active:scale-95 shadow-xs"
+                        title="Marcar senha como não compareceu"
+                      >
+                        <UserX className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                        <span>Não Veio</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
             )}
           </div>
 
           {/* Lado Direito: Visualizador da Fila em Espera (5 Colunas) */}
-          <div className="lg:col-span-5 rounded-3xl p-6 bg-slate-900/60 border border-slate-800 flex flex-col">
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+          <div className="lg:col-span-5 card-boom p-6 flex flex-col">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center space-x-2">
-                <Users className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-base font-bold text-slate-200 uppercase tracking-wider">
+                <Users className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                   Fila de Espera
                 </h3>
               </div>
               <div className="flex items-center gap-2">
                 {attendanceConfig.allowManualQueueSelection && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
                     Chamada Avulsa Ativa
                   </span>
                 )}
-                <span className="text-xs px-2.5 py-1 rounded-full bg-cyan-950 text-cyan-400 font-bold border border-cyan-800">
+                <span className="text-xs px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 font-extrabold border border-cyan-500/30">
                   {waitingQueue.length} aguardando
                 </span>
               </div>
@@ -893,49 +941,53 @@ export default function AtendimentoPage() {
 
             <div className="flex-1 overflow-y-auto space-y-2.5 max-h-[500px]">
               {waitingQueue.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-500 space-y-2">
-                  <Clock className="w-8 h-8 text-slate-700" />
-                  <span className="text-sm">Fila vazia no momento</span>
+                <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400 dark:text-slate-500 space-y-3">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-center text-slate-400">
+                    <Clock className="w-7 h-7" />
+                  </div>
+                  <span className="text-sm font-semibold">Fila vazia no momento</span>
+                  <span className="text-xs text-slate-400 max-w-xs">Todas as senhas foram atendidas ou aguardam emissão na triagem.</span>
                 </div>
               ) : (
                 waitingQueue.map((t, idx) => (
                   <div
                     key={t.id}
-                    className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition-colors gap-2"
+                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/90 dark:border-slate-800/80 flex items-center justify-between hover:border-cyan-400 dark:hover:border-cyan-500/50 hover:translate-x-1 transition-all gap-2 shadow-2xs"
+                    style={{ borderLeftColor: t.priorityColor || '#06B6D4', borderLeftWidth: '4px' }}
                   >
                     <div className="flex items-center space-x-3 min-w-0">
-                      <span className="text-xs font-mono font-bold text-slate-500 w-5 shrink-0">
+                      <span className="text-xs font-mono font-black text-slate-400 dark:text-slate-500 w-5 shrink-0">
                         #{idx + 1}
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center space-x-2">
-                          <span className="font-mono font-bold text-lg text-white">
+                          <span className="font-mono font-black text-lg text-slate-900 dark:text-white">
                             {t.formattedTicket}
                           </span>
                           <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
                             style={{ backgroundColor: t.priorityColor }}
                             title={t.priorityName}
                           />
                         </div>
-                        <span className="text-xs text-slate-400 block truncate max-w-[130px] sm:max-w-[160px]">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 block truncate max-w-[130px] sm:max-w-[160px]">
                           {t.customerName || t.serviceName}
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center space-x-2 shrink-0">
-                      <span className="text-xs text-slate-400 font-mono hidden sm:inline">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-mono hidden sm:inline px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-slate-900">
                         {new Date(t.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       {attendanceConfig.allowManualQueueSelection && (
                         <button
                           onClick={() => handleCallSpecific(t.id)}
                           disabled={isPending || Boolean(currentTicket) || !selectedLocation}
-                          className={`px-2.5 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1 ${
+                          className={`px-3 py-1.5 text-xs font-extrabold rounded-xl border transition-all flex items-center gap-1.5 ${
                             Boolean(currentTicket) || !selectedLocation
-                              ? 'bg-slate-800/50 text-slate-500 border-slate-700/50 cursor-not-allowed opacity-50'
-                              : 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 border-cyan-500/40 active:scale-95'
+                              ? 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700/50 cursor-not-allowed opacity-50'
+                              : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white border-cyan-500/40 active:scale-95 shadow-xs shadow-cyan-500/20 btn-boom'
                           }`}
                           title={
                             !selectedLocation
