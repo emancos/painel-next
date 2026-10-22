@@ -184,6 +184,30 @@ export async function callNextTicket(params: {
   serviceIds?: string[]
   orderMode?: 'PRIORITY' | 'INTERLEAVED'
 }) {
+  // 0. Garante que não há atendimento em andamento ou chamado neste guichê/posto
+  const [existingActive] = await db
+    .select({
+      id: tickets.id,
+      formattedTicket: tickets.formattedTicket,
+      status: tickets.status,
+    })
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.unitId, params.unitId),
+        eq(tickets.locationId, params.locationId),
+        inArray(tickets.status, ['CALLED', 'IN_PROGRESS'])
+      )
+    )
+    .limit(1)
+
+  if (existingActive) {
+    return {
+      success: false,
+      message: `A senha ${existingActive.formattedTicket} já está em atendimento neste posto. Finalize-a ou marque como 'Não Veio' antes de chamar a próxima.`,
+    }
+  }
+
   // 1. Carrega dados da unidade para obter configurações de atendimento
   const [unitRecord] = await db
     .select({ metadata: units.metadata })
@@ -346,6 +370,30 @@ export async function callSpecificTicket(params: {
   locationId: string
   userId?: string
 }) {
+  // 0. Garante que não há atendimento em andamento ou chamado neste guichê/posto
+  const [existingActive] = await db
+    .select({
+      id: tickets.id,
+      formattedTicket: tickets.formattedTicket,
+      status: tickets.status,
+    })
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.unitId, params.unitId),
+        eq(tickets.locationId, params.locationId),
+        inArray(tickets.status, ['CALLED', 'IN_PROGRESS'])
+      )
+    )
+    .limit(1)
+
+  if (existingActive) {
+    return {
+      success: false,
+      message: `A senha ${existingActive.formattedTicket} já está em atendimento neste posto. Finalize-a ou marque como 'Não Veio' antes de chamar outra senha.`,
+    }
+  }
+
   const [targetItem] = await db
     .select({
       ticket: tickets,
@@ -919,6 +967,30 @@ export async function resumePendingTicket(params: {
   locationId: string
   userId?: string
 }) {
+  // 0. Garante que não há atendimento em andamento ou chamado neste guichê/posto
+  const [existingActive] = await db
+    .select({
+      id: tickets.id,
+      formattedTicket: tickets.formattedTicket,
+      status: tickets.status,
+    })
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.unitId, params.unitId),
+        eq(tickets.locationId, params.locationId),
+        inArray(tickets.status, ['CALLED', 'IN_PROGRESS'])
+      )
+    )
+    .limit(1)
+
+  if (existingActive) {
+    return {
+      success: false,
+      message: `A senha ${existingActive.formattedTicket} já está em atendimento neste posto. Finalize-a ou marque como 'Não Veio' antes de retomar outra ficha.`,
+    }
+  }
+
   const [ticket] = await db
     .select()
     .from(tickets)

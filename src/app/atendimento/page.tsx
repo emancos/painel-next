@@ -218,6 +218,10 @@ export default function AtendimentoPage() {
   // Chamar Próximo (respeitando estritamente o modo definido pelo administrador)
   const handleCallNext = () => {
     if (!unit || !selectedLocationId) return
+    if (currentTicket) {
+      setStatusMessage(`Finalize o atendimento da senha atual (${currentTicket.formattedTicket}) ou marque como 'Não Veio' antes de chamar a próxima.`)
+      return
+    }
     setStatusMessage(null)
 
     startTransition(async () => {
@@ -240,6 +244,10 @@ export default function AtendimentoPage() {
   // Chamar Senha Específica Avulsa selecionada na Fila de Espera
   const handleCallSpecific = (ticketId: string) => {
     if (!unit || !selectedLocationId) return
+    if (currentTicket) {
+      setStatusMessage(`Finalize o atendimento da senha atual (${currentTicket.formattedTicket}) ou marque como 'Não Veio' antes de chamar outra senha.`)
+      return
+    }
     setStatusMessage(null)
 
     startTransition(async () => {
@@ -634,11 +642,11 @@ export default function AtendimentoPage() {
                     <span>CHAMAR PRÓXIMA SENHA</span>
                   </button>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <button
                       onClick={handleRecall}
                       disabled={isPending}
-                      className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs flex flex-col items-center justify-center gap-1 border border-slate-700"
+                      className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs flex flex-col items-center justify-center gap-1 border border-slate-700 transition-colors"
                       title="Chamar novamente no painel e falar voz"
                     >
                       <RotateCcw className="w-4 h-4" />
@@ -649,7 +657,7 @@ export default function AtendimentoPage() {
                       <button
                         onClick={handleStartAttendance}
                         disabled={isPending}
-                        className="p-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 shadow-md"
+                        className="p-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 shadow-md transition-colors"
                       >
                         <Play className="w-4 h-4" />
                         <span>Iniciar</span>
@@ -659,7 +667,7 @@ export default function AtendimentoPage() {
                       <button
                         onClick={handleOpenFinishModal}
                         disabled={isPending}
-                        className="p-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex flex-col items-center justify-center gap-1 shadow-md"
+                        className="p-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex flex-col items-center justify-center gap-1 shadow-md transition-colors"
                       >
                         <CheckCircle className="w-4 h-4" />
                         <span>Finalizar</span>
@@ -670,7 +678,7 @@ export default function AtendimentoPage() {
                     <button
                       onClick={handleOpenRedirectModal}
                       disabled={isPending}
-                      className="p-3 rounded-xl bg-indigo-950/70 hover:bg-indigo-900/90 text-indigo-300 font-bold text-xs flex flex-col items-center justify-center gap-1 border border-indigo-800/60"
+                      className="p-3 rounded-xl bg-indigo-950/70 hover:bg-indigo-900/90 text-indigo-300 font-bold text-xs flex flex-col items-center justify-center gap-1 border border-indigo-800/60 transition-colors"
                       title="Redirecionar para outro serviço ou local"
                     >
                       <ArrowRightLeft className="w-4 h-4" />
@@ -680,19 +688,11 @@ export default function AtendimentoPage() {
                     <button
                       onClick={handleNoShow}
                       disabled={isPending}
-                      className="p-3 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 font-bold text-xs flex flex-col items-center justify-center gap-1 border border-rose-800/60"
+                      className="p-3 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 font-bold text-xs flex flex-col items-center justify-center gap-1 border border-rose-800/60 transition-colors"
+                      title="Marcar senha como não compareceu"
                     >
                       <UserX className="w-4 h-4" />
                       <span>Não Veio</span>
-                    </button>
-
-                    <button
-                      onClick={handleCallNext}
-                      disabled={isPending}
-                      className="p-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 shadow-md"
-                    >
-                      <Megaphone className="w-4 h-4" />
-                      <span>Próximo</span>
                     </button>
                   </div>
                 )}
@@ -761,9 +761,17 @@ export default function AtendimentoPage() {
                       {attendanceConfig.allowManualQueueSelection && (
                         <button
                           onClick={() => handleCallSpecific(t.id)}
-                          disabled={isPending}
-                          className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/40 transition-all flex items-center gap-1 active:scale-95 disabled:opacity-40"
-                          title="Chamar esta ficha avulsa da fila de espera"
+                          disabled={isPending || Boolean(currentTicket)}
+                          className={`px-2.5 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1 ${
+                            Boolean(currentTicket)
+                              ? 'bg-slate-800/50 text-slate-500 border-slate-700/50 cursor-not-allowed opacity-50'
+                              : 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 border-cyan-500/40 active:scale-95'
+                          }`}
+                          title={
+                            currentTicket
+                              ? `Finalize ou marque 'Não Veio' na senha atual (${currentTicket.formattedTicket}) antes de chamar outra senha`
+                              : 'Chamar esta ficha avulsa da fila de espera'
+                          }
                         >
                           <Megaphone className="w-3.5 h-3.5" />
                           <span>Chamar</span>
@@ -849,8 +857,17 @@ export default function AtendimentoPage() {
                   <div className="flex items-center space-x-3 shrink-0">
                     <button
                       onClick={() => handleResumePending(t.id, t.formattedTicket)}
-                      disabled={isPending}
-                      className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center space-x-2 transition-all shadow-md shadow-emerald-500/20 active:scale-95 disabled:opacity-40"
+                      disabled={isPending || Boolean(currentTicket)}
+                      className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center space-x-2 transition-all shadow-md ${
+                        Boolean(currentTicket)
+                          ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-50'
+                          : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20 active:scale-95'
+                      }`}
+                      title={
+                        currentTicket
+                          ? `Finalize ou marque 'Não Veio' na senha atual (${currentTicket.formattedTicket}) antes de retomar outra ficha`
+                          : 'Retomar atendimento desta ficha'
+                      }
                     >
                       <Play className="w-4 h-4 fill-current" />
                       <span>Retomar Atendimento</span>
