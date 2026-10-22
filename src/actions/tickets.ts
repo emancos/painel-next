@@ -34,7 +34,20 @@ export async function getUnitData(unitId?: string) {
   const [activeServices, activePriorities, activeLocations, waitingTickets] = await Promise.all([
     db.select().from(services).where(and(eq(services.unitId, unit.id), eq(services.active, true))),
     db.select().from(priorities).where(eq(priorities.active, true)).orderBy(asc(priorities.id)),
-    db.select().from(locations).where(and(eq(locations.unitId, unit.id), eq(locations.active, true))).orderBy(asc(locations.number)),
+    db
+      .select({
+        id: locations.id,
+        name: locations.name,
+        number: locations.number,
+        roomId: locations.roomId,
+        currentUserId: locations.currentUserId,
+        active: locations.active,
+        roomName: rooms.name,
+      })
+      .from(locations)
+      .leftJoin(rooms, eq(locations.roomId, rooms.id))
+      .where(and(eq(locations.unitId, unit.id), eq(locations.active, true)))
+      .orderBy(asc(locations.number)),
     db.select({ count: sql<number>`count(*)::int` }).from(tickets).where(and(eq(tickets.unitId, unit.id), eq(tickets.status, 'ISSUED'))),
   ])
 

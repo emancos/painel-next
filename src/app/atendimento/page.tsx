@@ -16,7 +16,6 @@ import {
   getAttendedTicketsHistory
 } from '@/actions/tickets'
 import { getSessionAction, logoutAction } from '@/actions/auth'
-import { bindAttendantToLocation } from '@/actions/admin'
 import { 
   Megaphone, 
   RotateCcw, 
@@ -53,6 +52,8 @@ interface LocationItem {
   name: string
   number: number
   roomId?: string | null
+  roomName?: string | null
+  currentUserId?: string | null
 }
 
 interface WaitingTicketItem {
@@ -159,15 +160,31 @@ export default function AtendimentoPage() {
     getUnitData().then((data) => {
       if (!data) return
       setUnit(data.unit)
-      setLocations(data.locations)
+      setLocations((data.locations || []) as unknown as LocationItem[])
       setPrioritiesList(data.priorities || [])
-      if (data.locations.length > 0) {
-        setSelectedLocationId(data.locations[0].id)
-      }
     })
   }, [])
 
-  // 3. Atualiza fila e vincula usuário ao local
+  // 3. Define o posto selecionado exclusivamente com base no vínculo em "Mesas e Guichês na Unidade"
+  useEffect(() => {
+    if (!currentUser || locations.length === 0) return
+
+    const boundLocations = locations.filter((loc) => loc.currentUserId === currentUser.id)
+
+    if (boundLocations.length > 0) {
+      if (!selectedLocationId || !boundLocations.some((l) => l.id === selectedLocationId)) {
+        setSelectedLocationId(boundLocations[0].id)
+      }
+    } else if (currentUser.role === 'ADMIN') {
+      if (!selectedLocationId || !locations.some((l) => l.id === selectedLocationId)) {
+        setSelectedLocationId(locations[0].id)
+      }
+    } else {
+      setSelectedLocationId('')
+    }
+  }, [currentUser, locations, selectedLocationId])
+
+  // 4. Atualiza fila de atendimento
   const refreshQueue = (unitId: string, locId: string, uId?: string) => {
     getAttendantQueueState(unitId, locId, uId).then((state) => {
       setWaitingQueue(state.waiting as unknown as WaitingTicketItem[])
@@ -187,7 +204,6 @@ export default function AtendimentoPage() {
 
   useEffect(() => {
     if (unit && selectedLocationId && currentUser) {
-      bindAttendantToLocation(selectedLocationId, currentUser.id).catch(() => {})
       refreshQueue(unit.id, selectedLocationId, currentUser.id)
       const timer = setInterval(() => refreshQueue(unit.id, selectedLocationId, currentUser.id), 5000)
 
@@ -453,14 +469,18 @@ export default function AtendimentoPage() {
   }
 
   const handleLogout = async () => {
-    if (selectedLocationId) {
-      await bindAttendantToLocation(selectedLocationId, null)
-    }
     await logoutAction()
     router.push('/login')
   }
 
-  const selectedLocation = locations.find((l) => l.id === selectedLocationId)
+  // Locais aos quais o usuário logado está vinculado pela configuração do administrador
+  const userLocations = locations.filter((loc) => {
+    if (loc.currentUserId === currentUser?.id) return true
+    if (currentUser?.role === 'ADMIN' && !locations.some((l) => l.currentUserId === currentUser?.id)) return true
+    return false
+  })
+
+  const selectedLocation = userLocations.find((l) => l.id === selectedLocationId) || locations.find((l) => l.id === selectedLocationId)
 
   if (!currentUser) {
     return (
@@ -528,19 +548,41 @@ export default function AtendimentoPage() {
             </button>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <select
-              value={selectedLocationId}
-              onChange={(e) => setSelectedLocationId(e.target.value)}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 font-bold text-sm focus:outline-none focus:border-cyan-500"
-            >
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.name} {loc.number.toString().padStart(2, '0')}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Guichê / Sala / Ambulatório ao qual o usuário está vinculado */}
+          {userLocations.length > 1 ? (
+            <div className="flex items-center space-x-2">
+              <select
+                value={selectedLocationId}
+                onChange={(e) => setSelectedLocationId(e.target.value)}
+                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 font-bold text-sm focus:outline-none focus:border-cyan-500"
+              >
+                {userLocations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name} {loc.number.toString().padStart(2, '0')}{loc.roomName ? ` (${loc.roomName})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : selectedLocation ? (
+            <div className="flex items-center space-x-2.5 px-4 py-2 rounded-xl bg-cyan-950/60 border border-cyan-800/80 text-cyan-300 shadow-sm">
+              <DoorOpen className="w-4 h-4 text-cyan-400 shrink-0" />
+              <div className="text-left">
+                <span className="font-mono font-bold text-sm text-white block leading-tight">
+                  {selectedLocation.name} {selectedLocation.number.toString().padStart(2, '0')}
+                </span>
+                {selectedLocation.roomName && (
+                  <span className="text-[10px] text-cyan-400/90 block leading-tight font-medium">
+                    {selectedLocation.roomName}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+              <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Sem posto vinculado</span>
+            </div>
+          )}
         </div>
       </header>
 
@@ -605,11 +647,27 @@ export default function AtendimentoPage() {
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 mb-6">
           {/* Lado Esquerdo: Senha em Atendimento e Controles Principais (7 Colunas) */}
           <div className="lg:col-span-7 flex flex-col space-y-6">
-            <div className="flex-1 rounded-3xl p-8 bg-slate-900/60 border border-slate-800 flex flex-col justify-between relative overflow-hidden">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Posto: <span className="text-cyan-400 font-mono text-sm">{selectedLocation ? `${selectedLocation.name} ${selectedLocation.number.toString().padStart(2, '0')}` : 'Guichê'}</span>
-                </span>
+            {!selectedLocation ? (
+              <div className="flex-1 rounded-3xl p-8 bg-slate-900/60 border border-slate-800 flex flex-col items-center justify-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-3xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <MapPin className="w-8 h-8 animate-pulse" />
+                </div>
+                <div className="space-y-2 max-w-md">
+                  <h3 className="text-xl font-bold text-white">Nenhum Posto Vinculado</h3>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Olá, <strong className="text-cyan-400">{currentUser.name}</strong>. Seu usuário ainda não foi associado a nenhuma Mesa, Guichê ou Sala de Atendimento.
+                  </p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Solicite ao administrador da unidade para associar seu usuário ao posto correspondente na opção <strong>&ldquo;Mesas e Guichês na Unidade&rdquo;</strong> do Painel de Administração.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 rounded-3xl p-8 bg-slate-900/60 border border-slate-800 flex flex-col justify-between relative overflow-hidden">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Posto: <span className="text-cyan-400 font-mono text-sm">{selectedLocation.name} {selectedLocation.number.toString().padStart(2, '0')}{selectedLocation.roomName ? ` (${selectedLocation.roomName})` : ''}</span>
+                  </span>
                 {currentTicket && (
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Indicador de Reprodução na Tela da TV */}
@@ -806,6 +864,7 @@ export default function AtendimentoPage() {
                 )}
               </div>
             </div>
+            )}
           </div>
 
           {/* Lado Direito: Visualizador da Fila em Espera (5 Colunas) */}
@@ -869,14 +928,16 @@ export default function AtendimentoPage() {
                       {attendanceConfig.allowManualQueueSelection && (
                         <button
                           onClick={() => handleCallSpecific(t.id)}
-                          disabled={isPending || Boolean(currentTicket)}
+                          disabled={isPending || Boolean(currentTicket) || !selectedLocation}
                           className={`px-2.5 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1 ${
-                            Boolean(currentTicket)
+                            Boolean(currentTicket) || !selectedLocation
                               ? 'bg-slate-800/50 text-slate-500 border-slate-700/50 cursor-not-allowed opacity-50'
                               : 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 border-cyan-500/40 active:scale-95'
                           }`}
                           title={
-                            currentTicket
+                            !selectedLocation
+                              ? 'Você precisa estar vinculado a um posto de atendimento para chamar senhas'
+                              : currentTicket
                               ? `Finalize ou marque 'Não Veio' na senha atual (${currentTicket.formattedTicket}) antes de chamar outra senha`
                               : 'Chamar esta ficha avulsa da fila de espera'
                           }
@@ -965,14 +1026,16 @@ export default function AtendimentoPage() {
                   <div className="flex items-center space-x-3 shrink-0">
                     <button
                       onClick={() => handleResumePending(t.id, t.formattedTicket)}
-                      disabled={isPending || Boolean(currentTicket)}
+                      disabled={isPending || Boolean(currentTicket) || !selectedLocation}
                       className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center space-x-2 transition-all shadow-md ${
-                        Boolean(currentTicket)
+                        Boolean(currentTicket) || !selectedLocation
                           ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-50'
                           : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20 active:scale-95'
                       }`}
                       title={
-                        currentTicket
+                        !selectedLocation
+                          ? 'Você precisa estar vinculado a um posto de atendimento para retomar senhas'
+                          : currentTicket
                           ? `Finalize ou marque 'Não Veio' na senha atual (${currentTicket.formattedTicket}) antes de retomar outra ficha`
                           : 'Retomar atendimento desta ficha'
                       }
