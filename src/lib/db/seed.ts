@@ -121,6 +121,15 @@ async function runSeed() {
     active: true
   }).onConflictDoNothing()
 
+  const triagePasswordHash = await bcrypt.hash('triagem123', 10)
+  await db.insert(users).values({
+    name: 'Operador de Triagem',
+    email: 'triagem@painelnext.com',
+    passwordHash: triagePasswordHash,
+    role: 'TRIAGE',
+    active: true
+  }).onConflictDoNothing()
+
   console.log('✅ Seed executado com sucesso!')
   process.exit(0)
 }
