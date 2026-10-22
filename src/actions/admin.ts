@@ -1,9 +1,10 @@
 'use server'
 
 import { db } from '@/lib/db'
-import { units, floors, rooms, locations, users, userUnits, services } from '@/lib/db/schema'
+import { units, floors, rooms, locations, users, userUnits, services, dailyCounters, tickets, ticketsHistory } from '@/lib/db/schema'
 import { eq, asc, desc, and } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
+import { publishPanelEvent } from '@/lib/redis'
 
 /**
  * 1. UNIDADES: Listar, Criar e Atualizar
@@ -17,6 +18,7 @@ export async function createUnit(data: {
   name: string
   subtitle?: string
   logoUrl?: string
+  timezone?: string
 }) {
   const [newUnit] = await db
     .insert(units)
@@ -25,6 +27,7 @@ export async function createUnit(data: {
       name: data.name.trim(),
       subtitle: data.subtitle?.trim() || null,
       logoUrl: data.logoUrl?.trim() || null,
+      timezone: data.timezone?.trim() || 'America/Sao_Paulo',
       active: true,
     })
     .returning()
@@ -36,6 +39,7 @@ export async function updateUnit(unitId: string, data: {
   name: string
   subtitle?: string
   logoUrl?: string
+  timezone?: string
 }) {
   const [updated] = await db
     .update(units)
@@ -43,6 +47,7 @@ export async function updateUnit(unitId: string, data: {
       name: data.name.trim(),
       subtitle: data.subtitle?.trim() || null,
       logoUrl: data.logoUrl?.trim() || null,
+      ...(data.timezone ? { timezone: data.timezone.trim() } : {}),
       updatedAt: new Date(),
     })
     .where(eq(units.id, unitId))
@@ -387,11 +392,15 @@ export async function saveUnitSpeechConfig(unitId: string, speechConfig: any) {
 }
 
 /**
- * 7. CONFIGURAÇÕES DE ORDEM DE ATENDIMENTO E REGRAS DE FILA DA UNIDADE
+ * 7. CONFIGURAÇÕES DE ORDEM DE ATENDIMENTO, REGRAS DE FILA E RESET DE SENHAS DA UNIDADE
  */
 export interface UnitAttendanceConfig {
   defaultOrderMode: 'PRIORITY' | 'INTERLEAVED' // 'PRIORITY' = Estrito por Prioridade; 'INTERLEAVED' = Intercalado (1 Urgência, 1 Prioritário, 1 Convencional)
   allowManualQueueSelection: boolean // Permite chamar qualquer ficha diretamente da Fila de Espera
+  autoResetEnabled?: boolean // Habilita reset automático diário da numeração das senhas
+  autoResetTime?: string // Horário diário para reset automático (ex: "00:00", "07:00")
+  autoResetClearQueue?: boolean // Ao virar o horário de reset, também arquiva/cancela senhas não atendidas da fila anterior
+  lastManualResetAt?: string | null // Data/hora do último reset manual executado pelo administrador
 }
 
 export async function getUnitAttendanceConfig(unitId: string): Promise<UnitAttendanceConfig> {
@@ -402,9 +411,14 @@ export async function getUnitAttendanceConfig(unitId: string): Promise<UnitAtten
     .limit(1)
 
   const meta = (unit?.metadata as any) || {}
+  const cfg = meta.attendanceConfig || {}
   return {
-    defaultOrderMode: meta.attendanceConfig?.defaultOrderMode || 'PRIORITY',
-    allowManualQueueSelection: meta.attendanceConfig?.allowManualQueueSelection ?? true,
+    defaultOrderMode: cfg.defaultOrderMode || 'PRIORITY',
+    allowManualQueueSelection: cfg.allowManualQueueSelection ?? true,
+    autoResetEnabled: cfg.autoResetEnabled ?? true,
+    autoResetTime: cfg.autoResetTime || '00:00',
+    autoResetClearQueue: cfg.autoResetClearQueue ?? false,
+    lastManualResetAt: cfg.lastManualResetAt || null,
   }
 }
 
@@ -413,7 +427,13 @@ export async function saveUnitAttendanceConfig(unitId: string, attendanceConfig:
   if (!unit) throw new Error('Unidade não encontrada.')
 
   const existingMeta = (unit.metadata as any) || {}
-  const updatedMeta = { ...existingMeta, attendanceConfig }
+  const updatedMeta = {
+    ...existingMeta,
+    attendanceConfig: {
+      ...(existingMeta.attendanceConfig || {}),
+      ...attendanceConfig,
+    },
+  }
 
   const [updated] = await db
     .update(units)
@@ -425,6 +445,90 @@ export async function saveUnitAttendanceConfig(unitId: string, attendanceConfig:
     .returning()
 
   return updated
+}
+
+/**
+ * Zera a numeração de senhas da unidade para iniciar do número 1 (001).
+ * Opcionalmente arquiva as senhas atualmente em espera na fila.
+ */
+export async function resetUnitTicketCounter(params: {
+  unitId: string
+  clearWaitingQueue?: boolean
+}) {
+  const [unit] = await db.select().from(units).where(eq(units.id, params.unitId)).limit(1)
+  if (!unit) throw new Error('Unidade não encontrada.')
+
+  // 1. Zera todos os contadores de números de senhas da unidade
+  await db.delete(dailyCounters).where(eq(dailyCounters.unitId, params.unitId))
+
+  // 2. Se solicitado, arquiva senhas ativas que estão aguardando na fila
+  let clearedCount = 0
+  if (params.clearWaitingQueue) {
+    const waitingTickets = await db
+      .select()
+      .from(tickets)
+      .where(and(eq(tickets.unitId, params.unitId), eq(tickets.status, 'ISSUED')))
+
+    clearedCount = waitingTickets.length
+
+    if (waitingTickets.length > 0) {
+      const now = new Date()
+      const historyRows = waitingTickets.map((t) => ({
+        id: t.id,
+        unitId: t.unitId,
+        serviceId: t.serviceId,
+        priorityId: t.priorityId,
+        locationId: t.locationId,
+        userId: t.userId,
+        ticketNumber: t.ticketNumber,
+        ticketPrefix: t.ticketPrefix,
+        formattedTicket: t.formattedTicket,
+        status: 'CANCELLED',
+        resolution: 'UNSOLVED',
+        customerName: t.customerName,
+        customerDoc: t.customerDoc,
+        createdAt: t.createdAt,
+        finishedAt: now,
+        metadata: {
+          ...(t.metadata as any),
+          cancelledReason: 'Numeração e fila resetadas pelo administrador',
+          cancelledAt: now.toISOString(),
+        },
+      }))
+
+      await db.insert(ticketsHistory).values(historyRows)
+      await db.delete(tickets).where(and(eq(tickets.unitId, params.unitId), eq(tickets.status, 'ISSUED')))
+    }
+  }
+
+  // 3. Salva timestamp do último reset manual nos metadados da unidade
+  const nowStr = new Date().toISOString()
+  const existingMeta = (unit.metadata as any) || {}
+  const attendanceConfig = {
+    ...(existingMeta.attendanceConfig || {}),
+    lastManualResetAt: nowStr,
+  }
+
+  await db
+    .update(units)
+    .set({
+      metadata: { ...existingMeta, attendanceConfig },
+      updatedAt: new Date(),
+    })
+    .where(eq(units.id, params.unitId))
+
+  // 4. Notifica via Redis para atualização instantânea dos painéis e atendentes
+  await publishPanelEvent(params.unitId, {
+    type: 'CONFIG_CHANGED',
+    timestamp: nowStr,
+    payload: { action: 'RESET_COUNTERS', clearedCount },
+  }).catch(() => {})
+
+  return {
+    success: true,
+    resetAt: nowStr,
+    clearedCount,
+  }
 }
 
 /**

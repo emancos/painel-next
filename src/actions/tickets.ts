@@ -48,10 +48,57 @@ export async function getUnitData(unitId?: string) {
 }
 
 /**
+ * Calcula a data do ciclo operacional (YYYY-MM-DD) com base no fuso horário e no horário de reset diário configurado.
+ * Se o horário atual for anterior ao horário de reset da unidade, a data do ciclo é o dia anterior.
+ */
+function getOperationalDate(autoResetTime: string = '00:00', timeZone: string = 'America/Sao_Paulo', now: Date = new Date()): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timeZone || 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+
+  const parts = formatter.formatToParts(now)
+  let year = '', month = '', day = '', hour = 0, minute = 0
+  for (const p of parts) {
+    if (p.type === 'year') year = p.value
+    if (p.type === 'month') month = p.value
+    if (p.type === 'day') day = p.value
+    if (p.type === 'hour') hour = parseInt(p.value, 10)
+    if (p.type === 'minute') minute = parseInt(p.value, 10)
+  }
+
+  const [resetHour, resetMinute] = (autoResetTime || '00:00').split(':').map((v) => parseInt(v, 10) || 0)
+  const currentMinutes = hour * 60 + minute
+  const resetMinutes = resetHour * 60 + resetMinute
+
+  const d = new Date(`${year}-${month}-${day}T12:00:00Z`)
+  if (currentMinutes < resetMinutes) {
+    d.setUTCDate(d.getUTCDate() - 1)
+  }
+  return d.toISOString().slice(0, 10)
+}
+
+/**
  * Emite uma nova senha para a fila com incremento atômico de número diário.
  */
 export async function issueTicket(input: IssueTicketInput) {
-  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  // 0. Obter configurações de reset automático de horário e timezone da unidade
+  const [unitRecord] = await db
+    .select({ metadata: units.metadata, timezone: units.timezone })
+    .from(units)
+    .where(eq(units.id, input.unitId))
+    .limit(1)
+
+  const attendanceConfig = (unitRecord?.metadata as any)?.attendanceConfig
+  const autoResetEnabled = attendanceConfig?.autoResetEnabled ?? true
+  const autoResetTime = autoResetEnabled ? (attendanceConfig?.autoResetTime || '00:00') : '00:00'
+  const timeZone = unitRecord?.timezone || 'America/Sao_Paulo'
+  const today = getOperationalDate(autoResetTime, timeZone)
 
   // 1. Obter serviço para recuperar prefixo
   const [service] = await db
@@ -788,9 +835,14 @@ export async function getAttendantQueueState(unitId: string, locationId?: string
   ])
 
   const meta = (unitRecord?.metadata as any) || {}
+  const cfg = meta.attendanceConfig || {}
   const attendanceConfig = {
-    defaultOrderMode: (meta.attendanceConfig?.defaultOrderMode as 'PRIORITY' | 'INTERLEAVED') || 'PRIORITY',
-    allowManualQueueSelection: meta.attendanceConfig?.allowManualQueueSelection ?? true,
+    defaultOrderMode: (cfg.defaultOrderMode as 'PRIORITY' | 'INTERLEAVED') || 'PRIORITY',
+    allowManualQueueSelection: cfg.allowManualQueueSelection ?? true,
+    autoResetEnabled: cfg.autoResetEnabled ?? true,
+    autoResetTime: cfg.autoResetTime || '00:00',
+    autoResetClearQueue: cfg.autoResetClearQueue ?? false,
+    lastManualResetAt: cfg.lastManualResetAt || null,
   }
 
   return {
@@ -911,7 +963,14 @@ export async function getAttendedTicketsHistory(params: {
   date?: string
   searchQuery?: string
 }) {
-  const targetDate = params.date || new Date().toISOString().slice(0, 10)
+  const [unitRec] = await db
+    .select({ timezone: units.timezone })
+    .from(units)
+    .where(eq(units.id, params.unitId))
+    .limit(1)
+
+  const timeZone = unitRec?.timezone || 'America/Sao_Paulo'
+  const targetDate = params.date || getOperationalDate('00:00', timeZone)
 
   const items = await db
     .select({
@@ -947,7 +1006,7 @@ export async function getAttendedTicketsHistory(params: {
     .where(
       and(
         eq(ticketsHistory.unitId, params.unitId),
-        sql`to_char(coalesce(${ticketsHistory.finishedAt}, ${ticketsHistory.createdAt}), 'YYYY-MM-DD') = ${targetDate}`
+        sql`to_char(coalesce(${ticketsHistory.finishedAt}, ${ticketsHistory.createdAt}) AT TIME ZONE ${timeZone}, 'YYYY-MM-DD') = ${targetDate}`
       )
     )
     .orderBy(desc(ticketsHistory.finishedAt))

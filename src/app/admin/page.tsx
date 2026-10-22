@@ -28,7 +28,11 @@ import {
   Shuffle,
   CheckSquare,
   ListOrdered,
-  Briefcase
+  Briefcase,
+  RotateCcw,
+  Clock,
+  AlertTriangle,
+  Globe
 } from 'lucide-react'
 import { 
   getUnitsList, 
@@ -58,7 +62,8 @@ import {
   getUnitSpeechConfig,
   saveUnitSpeechConfig,
   getUnitAttendanceConfig,
-  saveUnitAttendanceConfig
+  saveUnitAttendanceConfig,
+  resetUnitTicketCounter
 } from '@/actions/admin'
 import { getSessionAction, logoutAction } from '@/actions/auth'
 import { speechManager } from '@/lib/speech'
@@ -98,9 +103,15 @@ export default function AdminPage() {
   const [simPreviewText, setSimPreviewText] = useState<string | null>(null)
   const [isSimCalling, setIsSimCalling] = useState(false)
 
-  // 7. Configurações de Ordem de Atendimento & Fila
+  // 7. Configurações de Ordem de Atendimento, Regras de Fila & Reset de Senhas
   const [attendanceOrderMode, setAttendanceOrderMode] = useState<'PRIORITY' | 'INTERLEAVED'>('PRIORITY')
   const [allowManualQueueSelection, setAllowManualQueueSelection] = useState<boolean>(true)
+  const [autoResetEnabled, setAutoResetEnabled] = useState<boolean>(true)
+  const [autoResetTime, setAutoResetTime] = useState<string>('00:00')
+  const [autoResetClearQueue, setAutoResetClearQueue] = useState<boolean>(false)
+  const [lastManualResetAt, setLastManualResetAt] = useState<string | null>(null)
+  const [isResettingTickets, setIsResettingTickets] = useState<boolean>(false)
+  const [manualResetClearQueue, setManualResetClearQueue] = useState<boolean>(true)
 
   // Filtro de Sala para Mesas/Guichês
   const [locationRoomFilter, setLocationRoomFilter] = useState<string>('ALL')
@@ -110,6 +121,7 @@ export default function AdminPage() {
   const [unitName, setUnitName] = useState('')
   const [unitSubtitle, setUnitSubtitle] = useState('')
   const [unitLogoUrl, setUnitLogoUrl] = useState('')
+  const [unitTimezone, setUnitTimezone] = useState('America/Sao_Paulo')
   const [editingUnitId, setEditingUnitId] = useState<string | null>(null)
   const [isUploadingLogo, setIsUploadingLogo] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -148,11 +160,13 @@ export default function AdminPage() {
   const [serviceUserId, setServiceUserId] = useState('')
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null)
 
-  // Carrega sessão e dados
+  // Carrega sessão e valida permissão exclusiva de ADMIN
   useEffect(() => {
     getSessionAction().then((u) => {
       if (!u) {
-        router.push('/login')
+        router.push('/login?redirect=/admin')
+      } else if (u.role !== 'ADMIN') {
+        router.push(u.role === 'TRIAGE' ? '/triagem' : '/atendimento')
       } else {
         setCurrentUser(u)
       }
@@ -200,6 +214,10 @@ export default function AdminPage() {
     if (attendanceCfg) {
       setAttendanceOrderMode(attendanceCfg.defaultOrderMode)
       setAllowManualQueueSelection(attendanceCfg.allowManualQueueSelection)
+      setAutoResetEnabled(attendanceCfg.autoResetEnabled ?? true)
+      setAutoResetTime(attendanceCfg.autoResetTime || '00:00')
+      setAutoResetClearQueue(attendanceCfg.autoResetClearQueue ?? false)
+      setLastManualResetAt(attendanceCfg.lastManualResetAt || null)
     }
   }
 
@@ -286,7 +304,7 @@ export default function AdminPage() {
     })
   }
 
-  // 7. SALVAR CONFIGURAÇÃO DE ORDEM E FILA
+  // 7. SALVAR CONFIGURAÇÃO DE ORDEM, FILA E RESET DE SENHAS
   const handleSaveAttendanceConfig = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedUnitId) return
@@ -295,13 +313,48 @@ export default function AdminPage() {
         await saveUnitAttendanceConfig(selectedUnitId, {
           defaultOrderMode: attendanceOrderMode,
           allowManualQueueSelection,
+          autoResetEnabled,
+          autoResetTime,
+          autoResetClearQueue,
         })
         setFeedback({
           type: 'success',
           message: 'Configurações de ordem de atendimento e regras da fila salvas com sucesso para a unidade!',
         })
+        loadUnitStructure(selectedUnitId)
       } catch (err) {
         setFeedback({ type: 'error', message: (err as Error).message })
+      }
+    })
+  }
+
+  // RESET MANUAL IMEDIATO DE SENHAS
+  const handleResetTicketCounter = () => {
+    if (!selectedUnitId) return
+    const msg = manualResetClearQueue
+      ? 'Deseja realmente resetar os contadores de senhas para iniciar do 001 e arquivar as senhas que estão aguardando na fila de hoje?'
+      : 'Deseja realmente resetar os contadores de senhas para iniciar do 001? (As senhas já emitidas na fila serão mantidas)'
+
+    if (!confirm(msg)) return
+
+    startTransition(async () => {
+      setIsResettingTickets(true)
+      try {
+        const res = await resetUnitTicketCounter({
+          unitId: selectedUnitId,
+          clearWaitingQueue: manualResetClearQueue,
+        })
+
+        setLastManualResetAt(res.resetAt)
+        setFeedback({
+          type: 'success',
+          message: `Numeração de senhas resetada com sucesso! A próxima senha começará em 001.${res.clearedCount > 0 ? ` (${res.clearedCount} senhas que estavam aguardando na fila foram arquivadas)` : ''}`,
+        })
+        loadUnitStructure(selectedUnitId)
+      } catch (err) {
+        setFeedback({ type: 'error', message: (err as Error).message })
+      } finally {
+        setIsResettingTickets(false)
       }
     })
   }
@@ -412,6 +465,7 @@ export default function AdminPage() {
             name: unitName,
             subtitle: unitSubtitle,
             logoUrl: unitLogoUrl,
+            timezone: unitTimezone,
           })
           setFeedback({ type: 'success', message: 'Unidade atualizada com sucesso!' })
         } else {
@@ -420,6 +474,7 @@ export default function AdminPage() {
             name: unitName,
             subtitle: unitSubtitle,
             logoUrl: unitLogoUrl,
+            timezone: unitTimezone,
           })
           setFeedback({ type: 'success', message: 'Nova unidade cadastrada com sucesso!' })
         }
@@ -427,6 +482,7 @@ export default function AdminPage() {
         setUnitName('')
         setUnitSubtitle('')
         setUnitLogoUrl('')
+        setUnitTimezone('America/Sao_Paulo')
         setEditingUnitId(null)
         loadAllData()
       } catch (err) {
@@ -441,6 +497,7 @@ export default function AdminPage() {
     setUnitName(u.name)
     setUnitSubtitle(u.subtitle || '')
     setUnitLogoUrl(u.logoUrl || '')
+    setUnitTimezone(u.timezone || 'America/Sao_Paulo')
     setActiveTab('UNITS')
   }
 
@@ -721,7 +778,13 @@ export default function AdminPage() {
                     {selectedUnit.code}
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-400 block max-w-[200px] truncate">{selectedUnit.subtitle || 'Unidade em Gerenciamento'}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-[11px] text-slate-400 block max-w-[180px] truncate">{selectedUnit.subtitle || 'Unidade em Gerenciamento'}</span>
+                  <span className="text-[10px] text-cyan-300 font-mono flex items-center gap-1 bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/40">
+                    <Globe className="w-2.5 h-2.5" />
+                    {selectedUnit.timezone || 'America/Sao_Paulo'}
+                  </span>
+                </div>
               </div>
             </div>
           )}
@@ -906,6 +969,73 @@ export default function AdminPage() {
                 />
               </div>
 
+              {/* FUSO HORÁRIO OFICIAL DA UNIDADE (TIMEZONE) */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-cyan-400" />
+                    <span>Fuso Horário Oficial da Unidade (Timezone)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+                        if (localTz) {
+                          setUnitTimezone(localTz)
+                          setFeedback({ type: 'success', message: `Fuso horário detectado: ${localTz}` })
+                        }
+                      } catch (err) {}
+                    }}
+                    className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1 font-bold"
+                    title="Detectar fuso deste navegador"
+                  >
+                    <span>Detectar Fuso Deste Dispositivo</span>
+                  </button>
+                </div>
+
+                <select
+                  value={unitTimezone}
+                  onChange={(e) => setUnitTimezone(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white font-medium text-xs focus:outline-none focus:border-cyan-500 font-mono"
+                >
+                  <optgroup label="Brasil (Fusos Oficiais)">
+                    <option value="America/Sao_Paulo">America/Sao_Paulo (Brasília, SP, RJ, Sul, Nordeste - UTC-3)</option>
+                    <option value="America/Manaus">America/Manaus (Amazonas, Rondônia, Roraima - UTC-4)</option>
+                    <option value="America/Cuiaba">America/Cuiaba (Mato Grosso - UTC-4)</option>
+                    <option value="America/Rio_Branco">America/Rio_Branco (Acre - UTC-5)</option>
+                    <option value="America/Noronha">America/Noronha (Fernando de Noronha - UTC-2)</option>
+                  </optgroup>
+                  <optgroup label="Portugal & Europa">
+                    <option value="Europe/Lisbon">Europe/Lisbon (Portugal Continental, Lisboa, Porto - UTC+0 / WET)</option>
+                    <option value="Atlantic/Madeira">Atlantic/Madeira (Ilha da Madeira - UTC+0)</option>
+                    <option value="Atlantic/Azores">Atlantic/Azores (Açores - UTC-1)</option>
+                    <option value="Europe/Madrid">Europe/Madrid (Espanha / Madri - UTC+1)</option>
+                    <option value="Europe/London">Europe/London (Reino Unido / Londres - UTC+0)</option>
+                    <option value="Europe/Paris">Europe/Paris (França / Paris - UTC+1)</option>
+                  </optgroup>
+                  <optgroup label="África Lusófona">
+                    <option value="Africa/Luanda">Africa/Luanda (Angola - UTC+1 / WAT)</option>
+                    <option value="Africa/Maputo">Africa/Maputo (Moçambique - UTC+2 / CAT)</option>
+                    <option value="Atlantic/Cape_Verde">Atlantic/Cape_Verde (Cabo Verde - UTC-1)</option>
+                    <option value="Africa/Bissau">Africa/Bissau (Guiné-Bissau - UTC+0)</option>
+                    <option value="Africa/Sao_Tome">Africa/Sao_Tome (São Tomé e Príncipe - UTC+0)</option>
+                  </optgroup>
+                  <optgroup label="Américas & Internacional">
+                    <option value="America/New_York">America/New_York (EUA Leste, Nova York, Flórida - UTC-5)</option>
+                    <option value="America/Chicago">America/Chicago (EUA Central - UTC-6)</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles (EUA Pacífico, Califórnia - UTC-8)</option>
+                    <option value="America/Buenos_Aires">America/Buenos_Aires (Argentina / Buenos Aires - UTC-3)</option>
+                    <option value="America/Montevideo">America/Montevideo (Uruguai / Montevidéu - UTC-3)</option>
+                    <option value="America/Santiago">America/Santiago (Chile / Santiago - UTC-4 / UTC-3)</option>
+                    <option value="UTC">UTC (Coordinated Universal Time - UTC+0)</option>
+                  </optgroup>
+                </select>
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  Define a hora oficial da TV, a virada de expediente (reset de senhas) e os relatórios diários desta unidade.
+                </span>
+              </div>
+
               {/* UPLOAD / URL DE LOGO/BRASÃO */}
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
@@ -991,6 +1121,7 @@ export default function AdminPage() {
                       setUnitName('')
                       setUnitSubtitle('')
                       setUnitLogoUrl('')
+                      setUnitTimezone('America/Sao_Paulo')
                     }}
                     className="px-4 py-3.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs"
                   >
@@ -1032,6 +1163,12 @@ export default function AdminPage() {
                       {u.subtitle && (
                         <p className="text-xs text-slate-400 mt-0.5">{u.subtitle}</p>
                       )}
+                      <div className="flex items-center space-x-2 mt-1">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-cyan-300 border border-slate-800 font-mono flex items-center gap-1">
+                          <Globe className="w-2.5 h-2.5" />
+                          {u.timezone || 'America/Sao_Paulo'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -2411,7 +2548,128 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Botão de Salvar */}
+                {/* 3. Reset Automático de Numeração por Horário Configurado */}
+                <div className="space-y-4 pt-4 border-t border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-cyan-400" />
+                      <span>3. Reset Automático da Numeração de Senhas</span>
+                    </label>
+                    <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60">
+                      Virada do Expediente
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold text-white block">
+                          Resetar números de senhas automaticamente todos os dias
+                        </span>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          Ao atingir o horário definido, o sistema inicia um novo ciclo com contagem a partir de <strong className="text-cyan-400 font-mono">001</strong> para todos os serviços.
+                        </p>
+                      </div>
+
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                        <input
+                          type="checkbox"
+                          checked={autoResetEnabled}
+                          onChange={(e) => setAutoResetEnabled(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+                      </label>
+                    </div>
+
+                    {autoResetEnabled && (
+                      <div className="space-y-3 pt-3 border-t border-slate-800/80 animate-fade-in">
+                        <div>
+                          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                            Horário de Reset Automático (Início da Contagem do 001)
+                          </label>
+                          <div className="flex items-center space-x-3">
+                            <input
+                              type="time"
+                              value={autoResetTime}
+                              onChange={(e) => setAutoResetTime(e.target.value)}
+                              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 font-mono font-bold text-sm focus:outline-none focus:border-cyan-500"
+                            />
+                            <span className="text-xs text-slate-400 flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1.5 rounded-lg border border-slate-800">
+                              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>Fuso da unidade: <strong className="text-cyan-300 font-mono">{selectedUnit?.timezone || 'America/Sao_Paulo'}</strong></span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Atalhos Rápidos de Horário */}
+                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase">Atalhos:</span>
+                          <button
+                            type="button"
+                            onClick={() => setAutoResetTime('00:00')}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              autoResetTime === '00:00'
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                            }`}
+                          >
+                            00:00 (Meia-noite)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAutoResetTime('06:00')}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              autoResetTime === '06:00'
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                            }`}
+                          >
+                            06:00 (Abertura Matutina)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAutoResetTime('07:00')}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              autoResetTime === '07:00'
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                            }`}
+                          >
+                            07:00 (Início do Expediente)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAutoResetTime('08:00')}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              autoResetTime === '08:00'
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                            }`}
+                          >
+                            08:00 (Comercial)
+                          </button>
+                        </div>
+
+                        <div className="pt-2">
+                          <label className="flex items-center space-x-2.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={autoResetClearQueue}
+                              onChange={(e) => setAutoResetClearQueue(e.target.checked)}
+                              className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-500 bg-slate-900 border-slate-700"
+                            />
+                            <span className="text-xs text-slate-300">
+                              Ao virar o horário, também arquivar senhas emitidas que não foram atendidas no dia anterior
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Botão de Salvar Regras */}
                 <div className="pt-2">
                   <button
                     type="submit"
@@ -2423,6 +2681,63 @@ export default function AdminPage() {
                   </button>
                 </div>
               </form>
+
+              {/* 4. Card de Reset Manual Imediato de Senhas (Reiniciar do 001 Agora) */}
+              <div className="p-6 rounded-3xl bg-slate-900/60 border border-amber-500/40 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <RotateCcw className="w-5 h-5 text-amber-400" />
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">
+                      Reset Manual Imediato de Senhas
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                    Ação Imediata
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Zere a numeração de todos os serviços da unidade imediatamente para que a próxima ficha emitida seja <strong className="text-amber-400 font-mono">001</strong>. Útil para troca de turnos, eventos extraordinários ou reinício da fila durante o expediente.
+                </p>
+
+                <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+                  <label className="flex items-center space-x-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={manualResetClearQueue}
+                      onChange={(e) => setManualResetClearQueue(e.target.checked)}
+                      className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 bg-slate-900 border-slate-700"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-white block">
+                        Também arquivar e limpar as senhas que estão aguardando na fila de hoje
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        (Recomendado) Evita duplicidade de senhas com o mesmo número na fila de espera.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                {lastManualResetAt && (
+                  <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    <span>
+                      Último reset manual executado em: <strong className="text-slate-300">{new Date(lastManualResetAt).toLocaleString('pt-BR')}</strong>
+                    </span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleResetTicketCounter}
+                  disabled={isPending || isResettingTickets}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-md shadow-amber-500/20 active:scale-[0.99] disabled:opacity-50"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>{isResettingTickets ? 'Resetando Contadores...' : 'Resetar Numeração Agora (Iniciar do 001)'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Coluna Direita: Simulação e Resumo Visual (5 Colunas) */}
@@ -2550,6 +2865,26 @@ export default function AdminPage() {
                       {allowManualQueueSelection ? 'Sim (Habilitado)' : 'Não (Bloqueado)'}
                     </strong>
                   </li>
+                  <li className="flex items-center justify-between border-t border-slate-800/80 pt-2">
+                    <span>Reset Automático:</span>
+                    <strong className={autoResetEnabled ? 'text-cyan-400 font-mono' : 'text-slate-500'}>
+                      {autoResetEnabled ? `Diário às ${autoResetTime}` : 'Desativado'}
+                    </strong>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span>Reinício da Numeração:</span>
+                    <strong className="text-white font-mono">
+                      Inicia sempre do 001
+                    </strong>
+                  </li>
+                  {lastManualResetAt && (
+                    <li className="flex items-center justify-between">
+                      <span>Último Reset Manual:</span>
+                      <strong className="text-amber-400 text-[11px]">
+                        {new Date(lastManualResetAt).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                      </strong>
+                    </li>
+                  )}
                 </ul>
               </div>
             </div>
