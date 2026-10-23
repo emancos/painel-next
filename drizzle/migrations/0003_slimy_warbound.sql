@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS "uq_location_unit";--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_location_room_unit" ON "locations" USING btree ("unit_id","room_id","name","number") WHERE "locations"."room_id" IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_location_unit_no_room" ON "locations" USING btree ("unit_id","name","number") WHERE "locations"."room_id" IS NULL;

@@ -12,7 +12,7 @@ import {
   uniqueIndex, 
   primaryKey 
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 
 // 1. Unidades de Atendimento (Nome, Subtítulo, Logo/Brasão)
 export const units = pgTable('units', {
@@ -70,7 +70,12 @@ export const locations = pgTable('locations', {
   number: smallint('number').notNull(),
   active: boolean('active').default(true).notNull()
 }, (table) => [
-  uniqueIndex('uq_location_unit').on(table.unitId, table.name, table.number)
+  uniqueIndex('uq_location_room_unit')
+    .on(table.unitId, table.roomId, table.name, table.number)
+    .where(sql`${table.roomId} IS NOT NULL`),
+  uniqueIndex('uq_location_unit_no_room')
+    .on(table.unitId, table.name, table.number)
+    .where(sql`${table.roomId} IS NULL`),
 ])
 
 export const userUnits = pgTable('user_units', {
