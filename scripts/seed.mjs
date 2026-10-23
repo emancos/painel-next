@@ -33,6 +33,8 @@ const priorities = pgTable('priorities', {
 const services = pgTable('services', {
   id: uuid('id').defaultRandom().primaryKey(),
   unitId: uuid('unit_id').notNull(),
+  roomId: uuid('room_id'),
+  userId: uuid('user_id'),
   name: varchar('name', { length: 100 }).notNull(),
   prefix: varchar('prefix', { length: 3 }).notNull(),
   weight: smallint('weight').default(1).notNull(),
@@ -92,7 +94,7 @@ async function runSeed() {
   const adminPasswordHash = await bcrypt.hash(rawPassword, 10)
 
   await db.insert(users).values({
-    name: 'Administrador do Sistema',
+    name: 'Emanuel Costa da Silva',
     email: adminEmail,
     passwordHash: adminPasswordHash,
     role: 'ADMIN',

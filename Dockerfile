@@ -47,6 +47,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Garante a existência e permissões de escrita na pasta de logos
 RUN mkdir -p /app/public/logos && chown -R nextjs:nodejs /app/public
 
+# Garante node_modules completos para scripts utilitários (seed, migrate, etc)
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+
 # Copia saída standalone e assets compilados
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
