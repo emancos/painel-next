@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useState, useTransition, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   getUnitData, 
@@ -47,6 +47,12 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
+import { AttendantNotificationControls } from '@/components/atendimento/AttendantNotificationControls'
+import { AttendantTicketToast } from '@/components/atendimento/AttendantTicketToast'
+import {
+  attendantNotificationManager,
+  IssuedTicketNotificationData,
+} from '@/lib/attendantNotifications'
 
 interface LocationItem {
   id: string
@@ -205,10 +211,71 @@ export default function AtendimentoPage() {
     }
   }, [currentUser, locations, selectedLocationId])
 
+  // Notificações de Novas Senhas Emitidas (Visual + Sonora)
+  const [incomingToastTicket, setIncomingToastTicket] = useState<IssuedTicketNotificationData | null>(null)
+  const knownTicketsRef = useRef<Set<string>>(new Set())
+  const processedTicketNotificationsRef = useRef<Set<string>>(new Set())
+  const isInitialQueueLoadedRef = useRef(false)
+
+  const handleTicketNotification = (ticketData: IssuedTicketNotificationData) => {
+    if (!ticketData?.ticketId) return
+    if (processedTicketNotificationsRef.current.has(ticketData.ticketId)) return
+    processedTicketNotificationsRef.current.add(ticketData.ticketId)
+    knownTicketsRef.current.add(ticketData.ticketId)
+
+    const settings = attendantNotificationManager.getSettings()
+
+    // Filtro: Apenas senhas de serviços elegíveis ao guichê do atendente
+    if (settings.notifyOnlyEligibleServices && eligibleServices.length > 0) {
+      const isEligible = eligibleServices.some((s) => s.id === ticketData.serviceId)
+      if (!isEligible) return
+    }
+
+    // 1. Toca o alerta sonoro sintetizado Web Audio (cross-platform Windows & Linux)
+    if (settings.soundEnabled) {
+      const isSpecial =
+        (ticketData.priorityName || '').toLowerCase().includes('especial') ||
+        (ticketData.priorityName || '').includes('80')
+      attendantNotificationManager.playTicketSound(isSpecial ? 'urgent' : settings.soundType)
+    }
+
+    // 2. Dispara notificação nativa da área de trabalho (Windows Action Center / Linux desktop)
+    if (settings.visualEnabled) {
+      attendantNotificationManager.showDesktopNotification(ticketData)
+      setIncomingToastTicket(ticketData)
+    }
+  }
+
   // 4. Atualiza fila de atendimento
   const refreshQueue = (unitId: string, locId: string, uId?: string) => {
     getAttendantQueueState(unitId, locId, uId).then((state) => {
-      setWaitingQueue(state.waiting as unknown as WaitingTicketItem[])
+      const waitingList = (state.waiting || []) as unknown as WaitingTicketItem[]
+      setWaitingQueue(waitingList)
+
+      // Detecta senhas novas emitidas durante o polling como fallback
+      if (!isInitialQueueLoadedRef.current) {
+        waitingList.forEach((t) => knownTicketsRef.current.add(t.id))
+        isInitialQueueLoadedRef.current = true
+      } else {
+        waitingList.forEach((t) => {
+          if (!knownTicketsRef.current.has(t.id)) {
+            handleTicketNotification({
+              ticketId: t.id,
+              formattedTicket: t.formattedTicket,
+              ticketPrefix: t.ticketPrefix,
+              ticketNumber: t.ticketNumber,
+              serviceId: t.serviceId,
+              serviceName: t.serviceName,
+              priorityId: 0,
+              priorityName: t.priorityName,
+              priorityColor: t.priorityColor,
+              customerName: t.customerName,
+              createdAt: t.createdAt,
+            })
+          }
+        })
+      }
+
       if (state.currentTicket) {
         setCurrentTicket(state.currentTicket as unknown as CurrentTicketData)
       } else {
@@ -264,6 +331,9 @@ export default function AtendimentoPage() {
               }
               return prev
             })
+          } else if (parsed.type === 'TICKET_ISSUED') {
+            handleTicketNotification(parsed.payload)
+            refreshQueue(unit.id, selectedLocationId, currentUser.id)
           } else if (parsed.type === 'TICKET_CALLED' || parsed.type === 'TICKET_FINISHED') {
             refreshQueue(unit.id, selectedLocationId, currentUser.id)
           }
@@ -353,6 +423,16 @@ export default function AtendimentoPage() {
       }
     })
   }
+
+  // Callbacks estáveis para fechar o Toast de Nova Senha e atender imediatamente
+  const handleDismissToast = useCallback(() => {
+    setIncomingToastTicket(null)
+  }, [])
+
+  const handleToastCallNow = useCallback((t: IssuedTicketNotificationData) => {
+    setIncomingToastTicket(null)
+    handleCallSpecific(t.ticketId)
+  }, [unit, selectedLocationId, currentTicket])
 
   // Rechamar
   const handleRecall = () => {
@@ -525,8 +605,16 @@ export default function AtendimentoPage() {
       <div className="mesh-orb-emerald top-1/2 -right-24 w-[450px] h-[450px] opacity-35 dark:opacity-20 pointer-events-none" />
       <div className="mesh-orb-indigo -bottom-24 left-1/3 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none" />
 
+      {/* Toast flutuante de Notificação de Nova Senha Emitida */}
+      <AttendantTicketToast
+        ticket={incomingToastTicket}
+        onDismiss={handleDismissToast}
+        canCallNow={!currentTicket}
+        onCallNow={handleToastCallNow}
+      />
+
       {/* Topo do Módulo do Atendente */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4 mb-6 z-10">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4 mb-6 relative z-30">
         <div className="flex items-center space-x-4">
           <Link
             href="/"
@@ -550,6 +638,9 @@ export default function AtendimentoPage() {
 
         {/* Controles de Topo: Botão Admin (se ADMIN), Seletor de Guichê e Usuário */}
         <div className="flex items-center space-x-3 shrink-0 flex-wrap gap-y-2">
+          {/* Notificações Sonoras e Visuais para Novas Senhas */}
+          <AttendantNotificationControls eligibleServicesCount={eligibleServices.length} />
+
           {/* Alternador de Tema Claro / Escuro (Admin/Sistema) */}
           <AdminThemeToggle />
 

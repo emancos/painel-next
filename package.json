@@ -9,8 +9,10 @@
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:prod": "node scripts/migrate.mjs",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/lib/db/seed.ts",
+    "db:seed:prod": "node scripts/seed.mjs",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

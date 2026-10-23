@@ -1,32 +1,69 @@
-version: '3.9'
+name: painel-next
 
 services:
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY}:latest
+    container_name: painel_next_app
+    restart: always
+    env_file:
+      - .env
+    ports:
+      # Porta mapeada para o exterior do container no host: 3010
+      - "3010:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://painel-next.integrasistemas.tec.br}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      # Persistência de logos e brasões enviados pelos administradores
+      - ./data/uploads:/app/public/logos
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - painel_next_net
+
   postgres:
     image: postgres:16-alpine
-    container_name: chamados-postgres
-    restart: unless-stopped
+    container_name: painel_next_db
+    restart: always
     environment:
-      POSTGRES_DB: painel_next
-      POSTGRES_USER: painel_next
-      POSTGRES_PASSWORD: painel_next_secret_pwd
+      POSTGRES_DB: ${POSTGRES_DB:-painel_next}
+      POSTGRES_USER: ${POSTGRES_USER:-painel_next}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: 'America/Sao_Paulo'
     volumes:
       - pg_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U painel_next -d painel_next" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-painel_next} -d ${POSTGRES_DB:-painel_next}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - painel_next_net
 
   redis:
     image: redis:7.2-alpine
-    container_name: chamados-redis
-    restart: unless-stopped
+    container_name: painel_next_redis
+    restart: always
     command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - painel_next_net
 
 volumes:
   pg_data:
+    name: painel_next_pgdata
+  redis_data:
+    name: painel_next_redisdata
+
+networks:
+  painel_next_net:
+    driver: bridge

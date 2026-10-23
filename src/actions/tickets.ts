@@ -178,6 +178,25 @@ export async function issueTicket(input: IssueTicketInput) {
       )
     )
 
+  // 5. Notifica atendentes e painéis em tempo real
+  await publishPanelEvent(input.unitId, {
+    type: 'TICKET_ISSUED',
+    timestamp: new Date().toISOString(),
+    payload: {
+      ticketId: newTicket.id,
+      formattedTicket,
+      ticketPrefix: service.prefix,
+      ticketNumber,
+      serviceId: input.serviceId,
+      serviceName: service.name,
+      priorityId: input.priorityId,
+      priorityName: priority?.name || 'Normal',
+      priorityColor: priority?.colorHex || '#06B6D4',
+      customerName: input.customerName || null,
+      createdAt: newTicket.createdAt,
+    },
+  })
+
   return {
     ...newTicket,
     serviceName: service.name,
