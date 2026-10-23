@@ -1,10 +1,11 @@
 'use server'
 
-import { eq, and, desc, asc, inArray, sql, lte, or, isNull } from 'drizzle-orm'
+import { eq, and, desc, asc, inArray, sql, lte, gte, lt, or, isNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { tickets, dailyCounters, services, priorities, locations, ticketsHistory, units, users, rooms } from '@/lib/db/schema'
+import { tickets, dailyCounters, services, priorities, locations, ticketsHistory, units, users, rooms, floors } from '@/lib/db/schema'
 import { publishPanelEvent } from '@/lib/redis'
-import { buildTicketAnnouncement } from '@/lib/speech-normalizer'
+import { buildTicketAnnouncement, formatLocationCascade } from '@/lib/speech-normalizer'
+import { getOperationalDate, getOperationalCycleStart } from '@/lib/operational-cycle'
 
 export interface IssueTicketInput {
   unitId: string
@@ -15,7 +16,7 @@ export interface IssueTicketInput {
 }
 
 /**
- * Obtém a unidade padrão ou especificada, juntamente com serviços, prioridades e locais.
+ * Obtém a unidade padrão ou especificada, juntamente com serviços, prioridades, locais, andares e salas.
  */
 export async function getUnitData(unitId?: string) {
   let unit
@@ -31,8 +32,8 @@ export async function getUnitData(unitId?: string) {
     return null
   }
 
-  const [activeServices, activePriorities, activeLocations, waitingTickets] = await Promise.all([
-    db.select().from(services).where(and(eq(services.unitId, unit.id), eq(services.active, true))),
+  const [activeServices, activePriorities, activeLocations, waitingTickets, unitFloors, unitRooms] = await Promise.all([
+    db.select().from(services).where(and(eq(services.unitId, unit.id), eq(services.active, true))).orderBy(asc(services.name)),
     db.select().from(priorities).where(eq(priorities.active, true)).orderBy(asc(priorities.id)),
     db
       .select({
@@ -43,12 +44,16 @@ export async function getUnitData(unitId?: string) {
         currentUserId: locations.currentUserId,
         active: locations.active,
         roomName: rooms.name,
+        floorName: floors.name,
       })
       .from(locations)
       .leftJoin(rooms, eq(locations.roomId, rooms.id))
+      .leftJoin(floors, eq(rooms.floorId, floors.id))
       .where(and(eq(locations.unitId, unit.id), eq(locations.active, true)))
       .orderBy(asc(locations.number)),
     db.select({ count: sql<number>`count(*)::int` }).from(tickets).where(and(eq(tickets.unitId, unit.id), eq(tickets.status, 'ISSUED'))),
+    db.select().from(floors).where(and(eq(floors.unitId, unit.id), eq(floors.active, true))).orderBy(asc(floors.number)),
+    db.select().from(rooms).where(and(eq(rooms.unitId, unit.id), eq(rooms.active, true))).orderBy(asc(rooms.name)),
   ])
 
   return {
@@ -56,44 +61,10 @@ export async function getUnitData(unitId?: string) {
     services: activeServices,
     priorities: activePriorities,
     locations: activeLocations,
+    floors: unitFloors,
+    rooms: unitRooms,
     waitingCount: waitingTickets[0]?.count || 0,
   }
-}
-
-/**
- * Calcula a data do ciclo operacional (YYYY-MM-DD) com base no fuso horário e no horário de reset diário configurado.
- * Se o horário atual for anterior ao horário de reset da unidade, a data do ciclo é o dia anterior.
- */
-function getOperationalDate(autoResetTime: string = '00:00', timeZone: string = 'America/Sao_Paulo', now: Date = new Date()): string {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timeZone || 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-
-  const parts = formatter.formatToParts(now)
-  let year = '', month = '', day = '', hour = 0, minute = 0
-  for (const p of parts) {
-    if (p.type === 'year') year = p.value
-    if (p.type === 'month') month = p.value
-    if (p.type === 'day') day = p.value
-    if (p.type === 'hour') hour = parseInt(p.value, 10)
-    if (p.type === 'minute') minute = parseInt(p.value, 10)
-  }
-
-  const [resetHour, resetMinute] = (autoResetTime || '00:00').split(':').map((v) => parseInt(v, 10) || 0)
-  const currentMinutes = hour * 60 + minute
-  const resetMinutes = resetHour * 60 + resetMinute
-
-  const d = new Date(`${year}-${month}-${day}T12:00:00Z`)
-  if (currentMinutes < resetMinutes) {
-    d.setUTCDate(d.getUTCDate() - 1)
-  }
-  return d.toISOString().slice(0, 10)
 }
 
 /**
@@ -204,6 +175,45 @@ export async function issueTicket(input: IssueTicketInput) {
     priorityColor: priority?.colorHex || '#06B6D4',
     peopleAhead: ahead?.count || 1,
   }
+}
+
+/**
+ * Determina a sala e o andar efetivos de atendimento em cascata:
+ * 1. Prioridade para a sala vinculada diretamente à Mesa/Guichê.
+ * 2. Se a Mesa/Guichê for geral (sem sala cadastrada), herda a sala e andar vinculado ao Serviço da senha.
+ */
+async function resolveEffectiveRoomAndFloor(
+  locationRoomName?: string | null,
+  locationFloorName?: string | null,
+  serviceRoomId?: string | null
+): Promise<{ roomName: string | null; floorName: string | null }> {
+  if (locationRoomName) {
+    return {
+      roomName: locationRoomName,
+      floorName: locationFloorName || null,
+    }
+  }
+
+  if (serviceRoomId) {
+    const [svcRoom] = await db
+      .select({
+        roomName: rooms.name,
+        floorName: floors.name,
+      })
+      .from(rooms)
+      .leftJoin(floors, eq(rooms.floorId, floors.id))
+      .where(eq(rooms.id, serviceRoomId))
+      .limit(1)
+
+    if (svcRoom) {
+      return {
+        roomName: svcRoom.roomName || null,
+        floorName: svcRoom.floorName || null,
+      }
+    }
+  }
+
+  return { roomName: null, floorName: null }
 }
 
 /**
@@ -336,10 +346,19 @@ export async function callNextTicket(params: {
     return { success: false, message: 'Nenhuma senha aguardando na fila.' }
   }
 
-  // 2. Obter informações do local/guichê
+  // 2. Obter informações do local/guichê com cascata de sala e andar
   const [location] = await db
-    .select()
+    .select({
+      id: locations.id,
+      name: locations.name,
+      number: locations.number,
+      roomId: locations.roomId,
+      roomName: rooms.name,
+      floorName: floors.name,
+    })
     .from(locations)
+    .leftJoin(rooms, eq(locations.roomId, rooms.id))
+    .leftJoin(floors, eq(rooms.floorId, floors.id))
     .where(eq(locations.id, params.locationId))
     .limit(1)
 
@@ -358,8 +377,12 @@ export async function callNextTicket(params: {
     .where(eq(tickets.id, nextItem.ticket.id))
     .returning()
 
-  // 4. Gerar fala naturalizada para o painel com as configurações da unidade
+  // 4. Gerar fala naturalizada para o painel com as configurações da unidade em cascata
   const speechConfig = meta.speechConfig
+  const { roomName: effectiveRoomName, floorName: effectiveFloorName } =
+    await resolveEffectiveRoomAndFloor(location?.roomName, location?.floorName, nextItem?.service?.roomId)
+
+  const locCascade = formatLocationCascade(effectiveFloorName, effectiveRoomName, location?.name, location?.number)
 
   const speech = buildTicketAnnouncement(
     {
@@ -368,11 +391,21 @@ export async function callNextTicket(params: {
       formattedTicket: updatedTicket.formattedTicket,
       locationName: location?.name,
       locationNumber: location?.number,
+      floorName: effectiveFloorName,
+      roomName: effectiveRoomName,
       customerName: updatedTicket.customerName,
       priorityName: nextItem.priority.name,
     },
     speechConfig
   )
+
+  console.log('[Chamada Painel] Chamada de senha emitida:', {
+    ticket: updatedTicket.formattedTicket,
+    mesa: `${location?.name} ${location?.number}`,
+    andar: effectiveFloorName,
+    sala: effectiveRoomName,
+    textoVoz: speech.plainText,
+  })
 
   const payload = {
     ticket: {
@@ -380,8 +413,11 @@ export async function callNextTicket(params: {
       serviceName: nextItem.service.name,
       priorityName: nextItem.priority.name,
       priorityColor: nextItem.priority.colorHex,
-      locationName: location ? `${location.name} ${location.number.toString().padStart(2, '0')}` : 'Guichê',
-      locationShort: location?.number?.toString() || '01',
+      locationName: locCascade.formatted,
+      locationPlace: locCascade.place,
+      locationShort: locCascade.short,
+      floorName: effectiveFloorName,
+      roomName: effectiveRoomName,
     },
     speech,
   }
@@ -452,8 +488,17 @@ export async function callSpecificTicket(params: {
   }
 
   const [location] = await db
-    .select()
+    .select({
+      id: locations.id,
+      name: locations.name,
+      number: locations.number,
+      roomId: locations.roomId,
+      roomName: rooms.name,
+      floorName: floors.name,
+    })
     .from(locations)
+    .leftJoin(rooms, eq(locations.roomId, rooms.id))
+    .leftJoin(floors, eq(rooms.floorId, floors.id))
     .where(eq(locations.id, params.locationId))
     .limit(1)
 
@@ -479,6 +524,10 @@ export async function callSpecificTicket(params: {
 
   const meta = (unitRecord?.metadata as any) || {}
   const speechConfig = meta.speechConfig
+  const { roomName: effectiveRoomName, floorName: effectiveFloorName } =
+    await resolveEffectiveRoomAndFloor(location?.roomName, location?.floorName, targetItem?.service?.roomId)
+
+  const locCascade = formatLocationCascade(effectiveFloorName, effectiveRoomName, location?.name, location?.number)
 
   const speech = buildTicketAnnouncement(
     {
@@ -487,11 +536,21 @@ export async function callSpecificTicket(params: {
       formattedTicket: updatedTicket.formattedTicket,
       locationName: location?.name,
       locationNumber: location?.number,
+      floorName: effectiveFloorName,
+      roomName: effectiveRoomName,
       customerName: updatedTicket.customerName,
       priorityName: targetItem.priority.name,
     },
     speechConfig
   )
+
+  console.log('[Chamada Painel] Chamada avulsa:', {
+    ticket: updatedTicket.formattedTicket,
+    mesa: `${location?.name} ${location?.number}`,
+    andar: effectiveFloorName,
+    sala: effectiveRoomName,
+    textoVoz: speech.plainText,
+  })
 
   const payload = {
     ticket: {
@@ -499,8 +558,11 @@ export async function callSpecificTicket(params: {
       serviceName: targetItem.service.name,
       priorityName: targetItem.priority.name,
       priorityColor: targetItem.priority.colorHex,
-      locationName: location ? `${location.name} ${location.number.toString().padStart(2, '0')}` : 'Guichê',
-      locationShort: location?.number?.toString() || '01',
+      locationName: locCascade.formatted,
+      locationPlace: locCascade.place,
+      locationShort: locCascade.short,
+      floorName: effectiveFloorName,
+      roomName: effectiveRoomName,
     },
     speech,
   }
@@ -524,11 +586,15 @@ export async function recallTicket(ticketId: string, unitId: string) {
       service: services,
       priority: priorities,
       location: locations,
+      roomName: rooms.name,
+      floorName: floors.name,
     })
     .from(tickets)
     .innerJoin(services, eq(tickets.serviceId, services.id))
     .innerJoin(priorities, eq(tickets.priorityId, priorities.id))
     .leftJoin(locations, eq(tickets.locationId, locations.id))
+    .leftJoin(rooms, eq(locations.roomId, rooms.id))
+    .leftJoin(floors, eq(rooms.floorId, floors.id))
     .where(eq(tickets.id, ticketId))
     .limit(1)
 
@@ -541,6 +607,10 @@ export async function recallTicket(ticketId: string, unitId: string) {
     .limit(1)
 
   const speechConfig = (unitRecord?.metadata as any)?.speechConfig
+  const { roomName: effectiveRoomName, floorName: effectiveFloorName } =
+    await resolveEffectiveRoomAndFloor(item.roomName, item.floorName, item.service?.roomId)
+
+  const locCascade = formatLocationCascade(effectiveFloorName, effectiveRoomName, item.location?.name, item.location?.number)
 
   const speech = buildTicketAnnouncement(
     {
@@ -549,11 +619,21 @@ export async function recallTicket(ticketId: string, unitId: string) {
       formattedTicket: item.ticket.formattedTicket,
       locationName: item.location?.name,
       locationNumber: item.location?.number,
+      floorName: effectiveFloorName,
+      roomName: effectiveRoomName,
       customerName: item.ticket.customerName,
       priorityName: item.priority.name,
     },
     speechConfig
   )
+
+  console.log('[Chamada Painel] Rechamar senha:', {
+    ticket: item.ticket.formattedTicket,
+    mesa: `${item.location?.name} ${item.location?.number}`,
+    andar: effectiveFloorName,
+    sala: effectiveRoomName,
+    textoVoz: speech.plainText,
+  })
 
   const payload = {
     ticket: {
@@ -561,8 +641,11 @@ export async function recallTicket(ticketId: string, unitId: string) {
       serviceName: item.service.name,
       priorityName: item.priority.name,
       priorityColor: item.priority.colorHex,
-      locationName: item.location ? `${item.location.name} ${item.location.number.toString().padStart(2, '0')}` : 'Guichê',
-      locationShort: item.location?.number?.toString() || '01',
+      locationName: locCascade.formatted,
+      locationPlace: locCascade.place,
+      locationShort: locCascade.short,
+      floorName: effectiveFloorName,
+      roomName: effectiveRoomName,
     },
     speech,
   }
@@ -749,6 +832,21 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
     .where(eq(units.id, unitId))
     .limit(1)
 
+  if (!unit) {
+    return {
+      unit: null,
+      allServices: [],
+      currentTicket: null,
+      history: [],
+    }
+  }
+
+  const attendanceConfig = (unit.metadata as any)?.attendanceConfig
+  const autoResetEnabled = attendanceConfig?.autoResetEnabled ?? true
+  const autoResetTime = autoResetEnabled ? (attendanceConfig?.autoResetTime || '00:00') : '00:00'
+  const timeZone = unit.timezone || 'America/Sao_Paulo'
+  const cycleStart = getOperationalCycleStart(autoResetTime, timeZone)
+
   // 1.1 Lista de serviços ativos da unidade (para configuração do painel)
   const allServices = await db
     .select({
@@ -760,12 +858,109 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
     .where(and(eq(services.unitId, unitId), eq(services.active, true)))
     .orderBy(asc(services.name))
 
+  // 1.2 Mapa de salas e andares da unidade para fallback rápido caso o guichê não tenha sala direta
+  const unitRoomsWithFloors = await db
+    .select({
+      roomId: rooms.id,
+      roomName: rooms.name,
+      floorName: floors.name,
+    })
+    .from(rooms)
+    .leftJoin(floors, eq(rooms.floorId, floors.id))
+    .where(eq(rooms.unitId, unitId))
+
+  const roomMap = new Map(unitRoomsWithFloors.map((r) => [r.roomId, r]))
+
   const validServiceIds = Array.isArray(serviceIds) && serviceIds.length > 0 ? serviceIds : null
 
-  // 2. Última senha chamada ativa no momento
+  // 1.3 Limpeza de senhas em atendimento/chamadas de ciclos anteriores para iniciar o painel limpo
+  const staleActiveTickets = await db
+    .select()
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.unitId, unitId),
+        inArray(tickets.status, ['CALLED', 'IN_PROGRESS']),
+        lt(tickets.calledAt, cycleStart)
+      )
+    )
+
+  if (staleActiveTickets.length > 0) {
+    const now = new Date()
+    const historyRows = staleActiveTickets.map((t) => ({
+      id: t.id,
+      unitId: t.unitId,
+      serviceId: t.serviceId,
+      priorityId: t.priorityId,
+      locationId: t.locationId,
+      userId: t.userId,
+      ticketNumber: t.ticketNumber,
+      ticketPrefix: t.ticketPrefix,
+      formattedTicket: t.formattedTicket,
+      status: 'FINISHED',
+      resolution: 'UNSOLVED',
+      customerName: t.customerName,
+      customerDoc: t.customerDoc,
+      createdAt: t.createdAt,
+      calledAt: t.calledAt,
+      finishedAt: now,
+      metadata: {
+        ...(t.metadata as any),
+        finishedReason: 'Auto-finalizado na virada do ciclo diário para painel limpo',
+        finishedAt: now.toISOString(),
+      },
+    }))
+    await db.insert(ticketsHistory).values(historyRows).catch(() => {})
+    await db.delete(tickets).where(inArray(tickets.id, staleActiveTickets.map((t) => t.id))).catch(() => {})
+  }
+
+  // 1.4 Se configurado, arquiva também senhas emitidas e não atendidas do dia anterior
+  if (attendanceConfig?.autoResetClearQueue) {
+    const staleWaiting = await db
+      .select()
+      .from(tickets)
+      .where(
+        and(
+          eq(tickets.unitId, unitId),
+          eq(tickets.status, 'ISSUED'),
+          lt(tickets.createdAt, cycleStart)
+        )
+      )
+
+    if (staleWaiting.length > 0) {
+      const now = new Date()
+      const historyRows = staleWaiting.map((t) => ({
+        id: t.id,
+        unitId: t.unitId,
+        serviceId: t.serviceId,
+        priorityId: t.priorityId,
+        locationId: t.locationId,
+        userId: t.userId,
+        ticketNumber: t.ticketNumber,
+        ticketPrefix: t.ticketPrefix,
+        formattedTicket: t.formattedTicket,
+        status: 'CANCELLED',
+        resolution: 'UNSOLVED',
+        customerName: t.customerName,
+        customerDoc: t.customerDoc,
+        createdAt: t.createdAt,
+        finishedAt: now,
+        metadata: {
+          ...(t.metadata as any),
+          cancelledReason: 'Fila arquivada automaticamente na virada do ciclo diário',
+          cancelledAt: now.toISOString(),
+        },
+      }))
+      await db.insert(ticketsHistory).values(historyRows).catch(() => {})
+      await db.delete(tickets).where(inArray(tickets.id, staleWaiting.map((t) => t.id))).catch(() => {})
+    }
+  }
+
+  // 2. Senhas ativas no momento (somente chamadas no ciclo operacional atual)
   const activeConditions = [
     eq(tickets.unitId, unitId),
     inArray(tickets.status, ['CALLED', 'IN_PROGRESS']),
+    gte(tickets.calledAt, cycleStart),
   ]
   if (validServiceIds) {
     activeConditions.push(inArray(tickets.serviceId, validServiceIds))
@@ -775,6 +970,7 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
     .select({
       id: tickets.id,
       serviceId: tickets.serviceId,
+      serviceRoomId: services.roomId,
       ticketPrefix: tickets.ticketPrefix,
       ticketNumber: tickets.ticketNumber,
       formattedTicket: tickets.formattedTicket,
@@ -786,19 +982,24 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
       priorityColor: priorities.colorHex,
       locationName: locations.name,
       locationNumber: locations.number,
+      roomName: rooms.name,
+      floorName: floors.name,
     })
     .from(tickets)
     .innerJoin(services, eq(tickets.serviceId, services.id))
     .innerJoin(priorities, eq(tickets.priorityId, priorities.id))
     .leftJoin(locations, eq(tickets.locationId, locations.id))
+    .leftJoin(rooms, eq(locations.roomId, rooms.id))
+    .leftJoin(floors, eq(rooms.floorId, floors.id))
     .where(and(...activeConditions))
     .orderBy(desc(tickets.calledAt))
-    .limit(6)
+    .limit(15)
 
-  // 3. Chamadas anteriores concluídas recentemente (para histórico na TV)
+  // 3. Chamadas anteriores concluídas recentemente (somente chamadas no ciclo operacional atual)
   const historyConditions = [
     eq(ticketsHistory.unitId, unitId),
     sql`${ticketsHistory.calledAt} IS NOT NULL`,
+    gte(ticketsHistory.calledAt, cycleStart),
   ]
   if (validServiceIds) {
     historyConditions.push(inArray(ticketsHistory.serviceId, validServiceIds))
@@ -808,6 +1009,7 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
     .select({
       id: ticketsHistory.id,
       serviceId: ticketsHistory.serviceId,
+      serviceRoomId: services.roomId,
       ticketPrefix: ticketsHistory.ticketPrefix,
       ticketNumber: ticketsHistory.ticketNumber,
       formattedTicket: ticketsHistory.formattedTicket,
@@ -819,18 +1021,22 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
       priorityColor: priorities.colorHex,
       locationName: locations.name,
       locationNumber: locations.number,
+      roomName: rooms.name,
+      floorName: floors.name,
     })
     .from(ticketsHistory)
     .innerJoin(services, eq(ticketsHistory.serviceId, services.id))
     .innerJoin(priorities, eq(ticketsHistory.priorityId, priorities.id))
     .leftJoin(locations, eq(ticketsHistory.locationId, locations.id))
+    .leftJoin(rooms, eq(locations.roomId, rooms.id))
+    .leftJoin(floors, eq(rooms.floorId, floors.id))
     .where(and(...historyConditions))
     .orderBy(desc(ticketsHistory.calledAt))
-    .limit(6)
+    .limit(15)
 
   const current = activeTickets[0] || (recentFinished.length > 0 ? recentFinished[0] : null)
 
-  // Candidatos ao histórico combinando ativos e finalizados
+  // Candidatos ao histórico combinando ativos e finalizados do ciclo corrente
   const rawHistoryCandidates = [
     ...activeTickets.slice(activeTickets[0] ? 1 : 0),
     ...recentFinished.slice(!activeTickets[0] && recentFinished[0] ? 1 : 0),
@@ -859,22 +1065,54 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
       seenKeys.add(t.formattedTicket)
       return true
     })
-    .slice(0, 5)
-    .map((t) => ({
-      ...t,
-      locationFormatted: t.locationName && t.locationNumber !== null ? `${t.locationName} ${t.locationNumber.toString().padStart(2, '0')}` : 'Guichê',
-    }))
+    .slice(0, 8)
+    .map((t) => {
+      const fallbackRoom = t.serviceRoomId ? roomMap.get(t.serviceRoomId) : null
+      const effectiveRoomName = t.roomName || fallbackRoom?.roomName || null
+      const effectiveFloorName = t.floorName || fallbackRoom?.floorName || null
+      const locCascade = formatLocationCascade(effectiveFloorName, effectiveRoomName, t.locationName, t.locationNumber)
+      return {
+        ...t,
+        locationFormatted: locCascade.formatted,
+        locationPlace: locCascade.place,
+        locationShort: locCascade.short,
+        floorName: effectiveFloorName,
+        roomName: effectiveRoomName,
+      }
+    })
+
+  let currentLocCascade = null
+  let currentEffectiveRoom = null
+  let currentEffectiveFloor = null
+
+  if (current) {
+    const fallbackRoom = current.serviceRoomId ? roomMap.get(current.serviceRoomId) : null
+    currentEffectiveRoom = current.roomName || fallbackRoom?.roomName || null
+    currentEffectiveFloor = current.floorName || fallbackRoom?.floorName || null
+    currentLocCascade = formatLocationCascade(currentEffectiveFloor, currentEffectiveRoom, current.locationName, current.locationNumber)
+  }
 
   return {
-    unit: unit || { name: 'Unidade Principal', code: 'UNI01' },
+    unit: {
+      id: unit.id,
+      code: unit.code,
+      name: unit.name,
+      subtitle: unit.subtitle,
+      logoUrl: unit.logoUrl,
+      timezone: unit.timezone,
+      autoResetEnabled,
+      autoResetTime,
+      cycleStart: cycleStart.toISOString(),
+    },
     allServices,
     currentTicket: current
       ? {
           ...current,
-          locationFormatted: current.locationName && current.locationNumber !== null
-            ? `${current.locationName} ${current.locationNumber.toString().padStart(2, '0')}`
-            : 'Guichê 01',
-          locationShort: current.locationNumber?.toString() || '01',
+          locationFormatted: currentLocCascade!.formatted,
+          locationPlace: currentLocCascade!.place,
+          locationShort: currentLocCascade!.short,
+          floorName: currentEffectiveFloor,
+          roomName: currentEffectiveRoom,
         }
       : null,
     history,

@@ -6,6 +6,7 @@ import { FeaturedTicket, FeaturedTicketData } from '@/components/panel/FeaturedT
 import { TicketHistory, HistoryTicketItem } from '@/components/panel/TicketHistory'
 import { DigitalClock } from '@/components/panel/DigitalClock'
 import { speechManager } from '@/lib/speech'
+import { getOperationalDate } from '@/lib/operational-cycle'
 import {
   Volume2,
   VolumeX,
@@ -34,6 +35,9 @@ interface SseTicketPayload {
     priorityColor?: string
     locationName: string
     locationShort: string
+    locationPlace?: string
+    floorName?: string | null
+    roomName?: string | null
   }
   speech: {
     plainText: string
@@ -61,6 +65,14 @@ export default function TVPanelPage({ params }: PanelPageProps) {
   // Referência do filtro de serviços mantida em sincronia para o listener SSE
   const selectedServiceIdsRef = useRef<string[]>([])
 
+  // Configurações de reset programado diário para limpar o painel no início do expediente
+  const autoResetConfigRef = useRef<{ enabled: boolean; time: string; timezone: string }>({
+    enabled: true,
+    time: '00:00',
+    timezone: 'America/Sao_Paulo',
+  })
+  const operationalCycleKeyRef = useRef<string | null>(null)
+
   const [currentTicket, setCurrentTicket] = useState<FeaturedTicketData | null>(null)
   const [history, setHistory] = useState<HistoryTicketItem[]>([])
   const [isConnected, setIsConnected] = useState(false)
@@ -76,6 +88,11 @@ export default function TVPanelPage({ params }: PanelPageProps) {
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [layout, setLayout] = useState<'classic' | 'widescreen' | 'compact'>('classic')
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
+
+  // Função utilitária para calcular a chave do ciclo operacional corrente da unidade
+  const getOperationalCycleKey = (autoResetTime: string = '00:00', timeZone: string = 'America/Sao_Paulo'): string => {
+    return getOperationalDate(autoResetTime, timeZone)
+  }
 
   // Desbloqueio e ativação do áudio (exigido por navegadores modernos)
   const handleEnableAudio = () => {
@@ -121,6 +138,18 @@ export default function TVPanelPage({ params }: PanelPageProps) {
       if (data.unit?.logoUrl) setUnitLogoUrl(data.unit.logoUrl)
       if (data.unit?.timezone) setUnitTimezone(data.unit.timezone)
 
+      if (data.unit) {
+        autoResetConfigRef.current = {
+          enabled: data.unit.autoResetEnabled ?? true,
+          time: data.unit.autoResetTime || '00:00',
+          timezone: data.unit.timezone || 'America/Sao_Paulo',
+        }
+        operationalCycleKeyRef.current = getOperationalCycleKey(
+          autoResetConfigRef.current.time,
+          autoResetConfigRef.current.timezone
+        )
+      }
+
       currentTicketRef.current = data.currentTicket || null
       setCurrentTicket(data.currentTicket || null)
 
@@ -137,7 +166,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
             seen.add(key)
             return true
           })
-          .slice(0, 5)
+          .slice(0, 8)
         setHistory(initialHistory)
       } else {
         setHistory([])
@@ -146,6 +175,28 @@ export default function TVPanelPage({ params }: PanelPageProps) {
       console.warn('Aviso ao carregar dados do painel:', err)
     }
   }, [unitId])
+
+  // Monitor periódico do horário programado: se o ciclo virar, limpa o painel para o novo dia
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const cfg = autoResetConfigRef.current
+      if (!cfg.enabled) return
+
+      const currentCycle = getOperationalCycleKey(cfg.time, cfg.timezone)
+      if (operationalCycleKeyRef.current && operationalCycleKeyRef.current !== currentCycle) {
+        console.log(`[Painel] Horário programado (${cfg.time}) atingido. Limpando painel para iniciar vazio no novo dia:`, currentCycle)
+        operationalCycleKeyRef.current = currentCycle
+        currentTicketRef.current = null
+        setCurrentTicket(null)
+        setHistory([])
+        displayQueueRef.current = []
+        setIsFlashing(false)
+        loadPanelData(selectedServiceIdsRef.current)
+      }
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [loadPanelData])
 
   // Processador sequencial da fila de chamadas com garantia de tempo de tela e áudio
   const processNextCall = async () => {
@@ -174,7 +225,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
           .filter(
             (h) => h.id !== newTicket.id && h.formattedTicket !== newTicket.formattedTicket
           )
-          .slice(0, 5)
+          .slice(0, 8)
       }
 
       const filtered = prevHistory.filter(
@@ -192,12 +243,16 @@ export default function TVPanelPage({ params }: PanelPageProps) {
           priorityName: prev.priorityName,
           priorityColor: prev.priorityColor,
           locationFormatted: prev.locationFormatted,
+          locationPlace: prev.locationPlace,
+          locationShort: prev.locationShort,
+          floorName: prev.floorName,
+          roomName: prev.roomName,
           calledAt: new Date(),
         }
-        return [retiredTicket, ...filtered].slice(0, 5)
+        return [retiredTicket, ...filtered].slice(0, 8)
       }
 
-      return filtered.slice(0, 5)
+      return filtered.slice(0, 8)
     })
 
     // 3. Ativa efeito de flash na tela
@@ -341,6 +396,21 @@ export default function TVPanelPage({ params }: PanelPageProps) {
       try {
         const parsed = JSON.parse(event.data)
 
+        if (
+          parsed.type === 'PANEL_RESET' ||
+          parsed.type === 'DAILY_RESET' ||
+          (parsed.type === 'CONFIG_CHANGED' && parsed.payload?.action === 'RESET_COUNTERS')
+        ) {
+          console.log('[Painel] Evento de reset em tempo real recebido via SSE. Limpando senhas do painel.')
+          currentTicketRef.current = null
+          setCurrentTicket(null)
+          setHistory([])
+          displayQueueRef.current = []
+          setIsFlashing(false)
+          loadPanelData(selectedServiceIdsRef.current)
+          return
+        }
+
         if (parsed.type === 'TICKET_CALLED') {
           const payload = parsed.payload as SseTicketPayload
 
@@ -365,7 +435,10 @@ export default function TVPanelPage({ params }: PanelPageProps) {
             priorityName: payload.ticket.priorityName,
             priorityColor: payload.ticket.priorityColor,
             locationFormatted: payload.ticket.locationName,
+            locationPlace: payload.ticket.locationPlace,
             locationShort: payload.ticket.locationShort,
+            floorName: payload.ticket.floorName,
+            roomName: payload.ticket.roomName,
           }
 
           // Enfileira a nova chamada garantindo que ela não atropela a que está na tela

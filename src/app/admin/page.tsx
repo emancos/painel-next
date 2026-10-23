@@ -2579,7 +2579,7 @@ export default function AdminPage() {
                           Resetar números de senhas automaticamente todos os dias
                         </span>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
-                          Ao atingir o horário definido, o sistema inicia um novo ciclo com contagem a partir de <strong className="text-cyan-400 font-mono">001</strong> para todos os serviços.
+                          Ao atingir o horário definido, o sistema inicia um novo ciclo com contagem a partir de <strong className="text-cyan-400 font-mono">001</strong> para todos os serviços e limpa automaticamente as informações de senhas do painel para o novo dia.
                         </p>
                       </div>
 

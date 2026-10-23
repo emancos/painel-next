@@ -202,18 +202,25 @@ export async function createLocation(data: {
   name: string // "Guichê" ou "Mesa"
   number: number
 }) {
-  const [newLoc] = await db
-    .insert(locations)
-    .values({
-      unitId: data.unitId,
-      roomId: data.roomId || null,
-      name: data.name.trim(),
-      number: data.number,
-      active: true,
-    })
-    .returning()
+  try {
+    const [newLoc] = await db
+      .insert(locations)
+      .values({
+        unitId: data.unitId,
+        roomId: data.roomId || null,
+        name: data.name.trim(),
+        number: data.number,
+        active: true,
+      })
+      .returning()
 
-  return newLoc
+    return newLoc
+  } catch (err: any) {
+    if (err?.code === '23505') {
+      throw new Error(`Já existe um(a) "${data.name} ${data.number}" cadastrado(a) nesta mesma sala ou unidade.`)
+    }
+    throw err
+  }
 }
 
 export async function updateLocation(locationId: string, data: {
@@ -221,17 +228,24 @@ export async function updateLocation(locationId: string, data: {
   number: number
   roomId?: string
 }) {
-  const [updated] = await db
-    .update(locations)
-    .set({
-      name: data.name.trim(),
-      number: data.number,
-      roomId: data.roomId || null,
-    })
-    .where(eq(locations.id, locationId))
-    .returning()
+  try {
+    const [updated] = await db
+      .update(locations)
+      .set({
+        name: data.name.trim(),
+        number: data.number,
+        roomId: data.roomId || null,
+      })
+      .where(eq(locations.id, locationId))
+      .returning()
 
-  return updated
+    return updated
+  } catch (err: any) {
+    if (err?.code === '23505') {
+      throw new Error(`Já existe um(a) "${data.name} ${data.number}" cadastrado(a) nesta mesma sala ou unidade.`)
+    }
+    throw err
+  }
 }
 
 export async function deleteLocation(locationId: string) {
@@ -518,6 +532,11 @@ export async function resetUnitTicketCounter(params: {
     .where(eq(units.id, params.unitId))
 
   // 4. Notifica via Redis para atualização instantânea dos painéis e atendentes
+  await publishPanelEvent(params.unitId, {
+    type: 'PANEL_RESET',
+    timestamp: nowStr,
+    payload: { action: 'RESET_COUNTERS', clearedCount },
+  }).catch(() => {})
   await publishPanelEvent(params.unitId, {
     type: 'CONFIG_CHANGED',
     timestamp: nowStr,

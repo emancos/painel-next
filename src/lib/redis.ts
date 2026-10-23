@@ -67,6 +67,8 @@ export interface PanelEvent<T = unknown> {
     | 'TICKET_PLAYING'
     | 'TICKET_PLAYED'
     | 'TICKET_ISSUED'
+    | 'PANEL_RESET'
+    | 'DAILY_RESET'
   timestamp: string
   payload: T
 }
