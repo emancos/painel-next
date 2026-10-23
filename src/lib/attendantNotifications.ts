@@ -28,6 +28,7 @@ export interface IssuedTicketNotificationData {
   priorityColor?: string
   customerName?: string | null
   createdAt?: Date | string
+  assignedUserId?: string | null
 }
 
 const STORAGE_KEY = 'atendimento_notification_settings_v1'

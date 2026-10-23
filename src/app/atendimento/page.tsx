@@ -225,6 +225,11 @@ export default function AtendimentoPage() {
 
     const settings = attendantNotificationManager.getSettings()
 
+    // Se a senha pertencer a um serviço restrito a outro atendente específico, ignora a notificação
+    if (ticketData.assignedUserId && currentUser && ticketData.assignedUserId !== currentUser.id) {
+      return
+    }
+
     // Filtro: Apenas senhas de serviços elegíveis ao guichê do atendente
     if (settings.notifyOnlyEligibleServices && eligibleServices.length > 0) {
       const isEligible = eligibleServices.some((s) => s.id === ticketData.serviceId)
