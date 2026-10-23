@@ -31,6 +31,10 @@ interface ServiceItem {
   name: string
   prefix: string
   roomId?: string | null
+  userId?: string | null
+  attendantName?: string | null
+  locationName?: string | null
+  roomName?: string | null
 }
 
 interface PriorityItem {
@@ -169,7 +173,7 @@ export default function TriagemTotemPage() {
           unitName: unit.name,
           unitSubtitle: unit.subtitle || null,
           unitLogoUrl: unit.logoUrl || null,
-          roomName: selectedRoom ? selectedRoom.name : null,
+          roomName: selectedRoom ? selectedRoom.name : (service.roomName || null),
           floorName: selectedRoomFloor ? selectedRoomFloor.name : null,
         })
 
@@ -688,10 +692,17 @@ export default function TriagemTotemPage() {
                             {vis.icon}
                           </div>
                           <div>
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className="text-xs font-mono text-cyan-800 dark:text-cyan-400 font-black px-2 py-0.5 rounded-md bg-cyan-100 dark:bg-cyan-500/10 border border-cyan-300 dark:border-cyan-500/20">
                                 Prefixo: {s.prefix}
                               </span>
+                              {s.attendantName && (
+                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/30 flex items-center gap-1 shadow-2xs">
+                                  <User className="w-3 h-3" />
+                                  <span>{s.attendantName}</span>
+                                  {s.locationName && <span className="opacity-75">({s.locationName})</span>}
+                                </span>
+                              )}
                             </div>
                             <h3 className="text-xl font-black text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">
                               {s.name}
