@@ -17,6 +17,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Garante que a pasta public e pastas necessárias sempre existam
+RUN mkdir -p /app/public /app/scripts /app/drizzle
+
 # Argumento e variável injetada pelo GitHub Actions para o bundle cliente
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
@@ -38,11 +41,11 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Cria pastas necessárias e define permissões
-RUN mkdir -p /app/public/logos && chown -R nextjs:nodejs /app/public
+# Copia arquivos estáticos públicos do builder com a propriedade do usuário nextjs
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copia arquivos estáticos públicos
-COPY --from=builder /app/public ./public
+# Garante a existência e permissões de escrita na pasta de logos
+RUN mkdir -p /app/public/logos && chown -R nextjs:nodejs /app/public
 
 # Copia saída standalone e assets compilados
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

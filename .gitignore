@@ -1,6 +1,5 @@
 node_modules/
 .next/
-logos/
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 .env.local
@@ -8,3 +7,7 @@ tsconfig.tsbuildinfo
 .env.*
 !.env.example
 !.env.production.example
+
+# Ignora imagens salvas localmente mantendo a estrutura de pastas no Git
+public/logos/*
+!public/logos/.gitkeep
