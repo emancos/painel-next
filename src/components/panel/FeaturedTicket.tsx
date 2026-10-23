@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, MapPin, Tag, Sparkles } from 'lucide-react'
+import { User, MapPin, Tag, Sparkles, Building2, DoorOpen } from 'lucide-react'
 
 export interface FeaturedTicketData {
   id: string
@@ -14,6 +14,9 @@ export interface FeaturedTicketData {
   priorityColor?: string
   locationFormatted: string
   locationShort: string
+  locationPlace?: string
+  floorName?: string | null
+  roomName?: string | null
 }
 
 interface FeaturedTicketProps {
@@ -219,15 +222,41 @@ export function FeaturedTicket({
               <MapPin className="w-7 h-7" />
             </div>
             <div>
-              <span
-                className={`text-xs font-bold uppercase tracking-widest block mb-0.5 ${
-                  isLight ? 'text-slate-500' : 'text-slate-400'
-                }`}
-              >
-                Local de Atendimento
-              </span>
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span
+                  className={`text-xs font-bold uppercase tracking-wider ${
+                    isLight ? 'text-slate-500' : 'text-slate-400'
+                  }`}
+                >
+                  Local de Atendimento
+                </span>
+                {ticket.floorName && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-extrabold transition-all shadow-xs ${
+                      isLight
+                        ? 'bg-sky-50 text-sky-950 border border-sky-300'
+                        : 'bg-sky-500/20 text-sky-200 border border-sky-500/35'
+                    }`}
+                  >
+                    <Building2 className={`w-3.5 h-3.5 shrink-0 ${isLight ? 'text-sky-700' : 'text-sky-400'}`} />
+                    <span>{ticket.floorName}</span>
+                  </span>
+                )}
+                {ticket.roomName && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-extrabold transition-all shadow-xs ${
+                      isLight
+                        ? 'bg-purple-50 text-purple-950 border border-purple-300'
+                        : 'bg-purple-500/20 text-purple-200 border border-purple-500/35'
+                    }`}
+                  >
+                    <DoorOpen className={`w-3.5 h-3.5 shrink-0 ${isLight ? 'text-purple-700' : 'text-purple-400'}`} />
+                    <span>{ticket.roomName}</span>
+                  </span>
+                )}
+              </div>
               <span className={`text-2xl md:text-3xl font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                {ticket.locationFormatted}
+                {ticket.locationPlace || ticket.locationFormatted}
               </span>
             </div>
           </div>
