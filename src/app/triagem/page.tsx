@@ -12,14 +12,16 @@ import {
   Printer,
   ArrowLeft,
   Layers,
-  HelpCircle,
   CreditCard,
   FileText,
   LogOut,
   Tv,
   UserCheck,
-  ShieldCheck,
-  Loader2
+  Loader2,
+  Building,
+  DoorOpen,
+  ChevronRight,
+  MapPin,
 } from 'lucide-react'
 import Link from 'next/link'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
@@ -28,6 +30,7 @@ interface ServiceItem {
   id: string
   name: string
   prefix: string
+  roomId?: string | null
 }
 
 interface PriorityItem {
@@ -35,6 +38,19 @@ interface PriorityItem {
   name: string
   description: string | null
   colorHex: string
+}
+
+interface FloorItem {
+  id: string
+  name: string
+  number: number
+}
+
+interface RoomItem {
+  id: string
+  floorId?: string | null
+  name: string
+  number?: string | null
 }
 
 interface IssuedTicketModalData {
@@ -48,6 +64,8 @@ interface IssuedTicketModalData {
   unitName: string
   unitSubtitle?: string | null
   unitLogoUrl?: string | null
+  roomName?: string | null
+  floorName?: string | null
 }
 
 export default function TriagemTotemPage() {
@@ -57,8 +75,14 @@ export default function TriagemTotemPage() {
   const [unit, setUnit] = useState<{ id: string; name: string; subtitle?: string | null; logoUrl?: string | null } | null>(null)
   const [services, setServices] = useState<ServiceItem[]>([])
   const [priorities, setPriorities] = useState<PriorityItem[]>([])
+  const [floors, setFloors] = useState<FloorItem[]>([])
+  const [rooms, setRooms] = useState<RoomItem[]>([])
+
+  // Estado da seleção hierárquica (Andar -> Sala -> Serviço)
+  const [selectedFloorId, setSelectedFloorId] = useState<string | 'ALL'>('ALL')
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null)
+
   const [customerName, setCustomerName] = useState('')
-  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null)
   const [selectedPriority, setSelectedPriority] = useState<PriorityItem | null>(null)
   const [issuedTicket, setIssuedTicket] = useState<IssuedTicketModalData | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -76,15 +100,17 @@ export default function TriagemTotemPage() {
     })
   }, [router])
 
-  // 2. Carrega dados da unidade, serviços e prioridades
+  // 2. Carrega dados da unidade, serviços, prioridades, andares e salas
   useEffect(() => {
     getUnitData()
-      .then((data) => {
+      .then((data: any) => {
         if (!data) return
         setUnit(data.unit)
-        setServices(data.services)
-        setPriorities(data.priorities)
-        if (data.priorities.length > 0) {
+        setServices(data.services || [])
+        setPriorities(data.priorities || [])
+        if (data.floors) setFloors(data.floors)
+        if (data.rooms) setRooms(data.rooms)
+        if (data.priorities && data.priorities.length > 0) {
           setSelectedPriority(data.priorities[0])
         }
       })
@@ -95,6 +121,29 @@ export default function TriagemTotemPage() {
     await logoutAction()
     router.push('/login')
   }
+
+  // Identificação da sala e andar atualmente selecionados
+  const hasRooms = rooms.length > 0
+  const selectedRoom = rooms.find((r) => r.id === selectedRoomId) || null
+  const selectedRoomFloor = selectedRoom ? floors.find((f) => f.id === selectedRoom.floorId) || null : null
+
+  // Filtra as salas pelo andar selecionado na etapa 1
+  const filteredRooms = rooms.filter((r) => {
+    if (selectedFloorId === 'ALL') return true
+    return r.floorId === selectedFloorId
+  })
+
+  // Filtra os serviços correspondentes à sala selecionada
+  const eligibleServices = selectedRoomId
+    ? (() => {
+        if (selectedRoomId === 'GENERAL') {
+          const generalOnly = services.filter((s) => !s.roomId)
+          return generalOnly.length > 0 ? generalOnly : services
+        }
+        const linked = services.filter((s) => s.roomId === selectedRoomId)
+        return linked.length > 0 ? linked : services
+      })()
+    : services
 
   const handleIssue = (service: ServiceItem, priority: PriorityItem) => {
     if (!unit) return
@@ -120,6 +169,8 @@ export default function TriagemTotemPage() {
           unitName: unit.name,
           unitSubtitle: unit.subtitle || null,
           unitLogoUrl: unit.logoUrl || null,
+          roomName: selectedRoom ? selectedRoom.name : null,
+          floorName: selectedRoomFloor ? selectedRoomFloor.name : null,
         })
 
         setCustomerName('')
@@ -300,7 +351,7 @@ export default function TriagemTotemPage() {
           {/* Botão Sair / Logout */}
           <button
             onClick={handleLogout}
-            className="h-11 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 text-xs font-bold transition-all shadow-xs flex items-center space-x-2 shrink-0 active:scale-95"
+            className="h-11 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 text-xs font-bold transition-all shadow-xs flex items-center space-x-2 shrink-0 active:scale-95 cursor-pointer"
             title="Encerrar Sessão"
           >
             <LogOut className="w-4 h-4" />
@@ -310,124 +361,358 @@ export default function TriagemTotemPage() {
       </header>
 
       {/* Conteúdo Central */}
-      <main className="max-w-5xl w-full mx-auto my-8 space-y-8 flex-1 flex flex-col justify-center z-10">
+      <main className="max-w-5xl w-full mx-auto my-6 space-y-6 flex-1 flex flex-col justify-center z-10">
         {errorMsg && (
           <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-800 dark:text-rose-200 text-sm font-bold shadow-xs">
             {errorMsg}
           </div>
         )}
 
-        {/* Campo Opcional de Identificação para Fala */}
-        <div className="card-boom p-6">
-          <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center space-x-2 mb-2">
-            <User className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-            <span>Nome do Cidadão / Paciente (Opcional - para ser anunciado no painel por voz)</span>
-          </label>
-          <input
-            type="text"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Digite seu nome (Ex: João da Silva)..."
-            className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 font-medium text-lg focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all shadow-inner"
-          />
-        </div>
+        {/* Indicador de Etapas quando a unidade possui salas configuradas */}
+        {hasRooms && (
+          <div className="flex items-center justify-center space-x-3 pb-2">
+            <button
+              type="button"
+              onClick={() => setSelectedRoomId(null)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+                !selectedRoomId
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/30 ring-2 ring-cyan-500/40'
+                  : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white border border-slate-300 dark:border-slate-800'
+              }`}
+            >
+              <span className="w-5 h-5 rounded-full bg-black/20 flex items-center justify-center text-[10px] font-black">1</span>
+              <span>1. Andar & Sala</span>
+            </button>
 
-        {/* Seleção de Prioridade (Abas Específicas por Cor) */}
-        <div className="space-y-3">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-cyan-500" />
-            <span>1. Selecione o Tipo de Atendimento:</span>
-          </span>
+            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            {priorities.map((p) => {
-              const isSelected = selectedPriority?.id === p.id
-              const vis = getPriorityVisuals(p)
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setSelectedPriority(p)}
-                  className={`p-5 rounded-2xl text-left transition-all ${
-                    isSelected ? vis.activeClass : vis.inactiveClass
-                  } active:scale-[0.98] shadow-xs cursor-pointer`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2.5">
-                      <span
-                        className={`w-3.5 h-3.5 rounded-full ${vis.dotClass} shadow-xs`}
-                        style={{ backgroundColor: p.colorHex || undefined }}
-                      />
-                      <span className="font-black text-slate-900 dark:text-white text-base">{p.name}</span>
-                    </div>
-
-                    {isSelected && (
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-black uppercase tracking-wider shadow-xs badge-selected">
-                        Selecionado
-                      </span>
-                    )}
-                  </div>
-
-                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider block mb-1.5 w-fit ${vis.pillClass}`}>
-                    {vis.tag}
-                  </span>
-
-                  {p.description && (
-                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                      {p.description}
-                    </p>
-                  )}
-                </button>
-              )
-            })}
+            <div
+              className={`flex items-center space-x-2 px-4 py-2 rounded-2xl text-xs font-black transition-all ${
+                selectedRoomId
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/30 ring-2 ring-cyan-500/40'
+                  : 'bg-slate-100/50 dark:bg-slate-900/40 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-800/40'
+              }`}
+            >
+              <span className="w-5 h-5 rounded-full bg-black/20 flex items-center justify-center text-[10px] font-black">2</span>
+              <span>2. Serviços da Sala</span>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Seleção do Serviço (Botões Grandes de Toque) */}
-        <div className="space-y-3">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>2. Toque no Serviço para Imprimir / Emitir a Senha:</span>
-          </span>
+        {/* ========================================================
+            ETAPA 1: SELEÇÃO DE ANDAR E SALA (quando há salas)
+        ======================================================== */}
+        {hasRooms && !selectedRoomId ? (
+          <div className="space-y-5 animate-fade-in">
+            {/* Filtro de Andares (quando houver andares cadastrados) */}
+            {floors.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Building className="w-4 h-4 text-cyan-500" />
+                  <span>Filtre pelo Andar:</span>
+                </span>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFloorId('ALL')}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
+                      selectedFloorId === 'ALL'
+                        ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                        : 'bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-cyan-400'
+                    }`}
+                  >
+                    Todos os Andares ({rooms.length})
+                  </button>
+                  {floors.map((f) => {
+                    const count = rooms.filter((r) => r.floorId === f.id).length
+                    const isSel = selectedFloorId === f.id
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setSelectedFloorId(f.id)}
+                        className={`px-4 py-2.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isSel
+                            ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                            : 'bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-cyan-400'
+                        }`}
+                      >
+                        <Building className="w-3.5 h-3.5" />
+                        <span>{f.name}</span>
+                        <span className="text-[10px] opacity-75">({count})</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {services.map((s) => {
-              const vis = getServiceVisuals(s.name)
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={isPending || !selectedPriority}
-                  onClick={() => handleIssue(s, selectedPriority!)}
-                  className={`group p-6 rounded-3xl card-boom ${vis.cardClass} flex items-center justify-between text-left active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-md`}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700/60 flex items-center justify-center group-hover:scale-110 group-hover:rotate-1 transition-all shadow-xs">
-                      {vis.icon}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-mono text-cyan-800 dark:text-cyan-400 font-black px-2 py-0.5 rounded-md bg-cyan-100 dark:bg-cyan-500/10 border border-cyan-300 dark:border-cyan-500/20">
-                          Prefixo: {s.prefix}
-                        </span>
+            {/* Grade de Salas Disponíveis */}
+            <div className="space-y-2">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <DoorOpen className="w-4 h-4 text-cyan-500" />
+                <span>Toque na Sala ou Consultório para selecionar:</span>
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredRooms.map((room) => {
+                  const floor = floors.find((f) => f.id === room.floorId)
+                  const linkedServices = services.filter((s) => s.roomId === room.id)
+                  return (
+                    <button
+                      key={room.id}
+                      type="button"
+                      onClick={() => setSelectedRoomId(room.id)}
+                      className="group p-6 rounded-3xl card-boom text-left hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer border border-slate-300 dark:border-slate-800/80 hover:border-cyan-500/60 flex flex-col justify-between min-h-[150px] shadow-sm hover:shadow-lg"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400 group-hover:scale-110 group-hover:bg-cyan-500 group-hover:text-slate-950 transition-all shadow-xs">
+                            <DoorOpen className="w-6 h-6" />
+                          </div>
+                          {floor && (
+                            <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-cyan-100 dark:bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/30 flex items-center gap-1 shadow-2xs">
+                              <Building className="w-3 h-3" />
+                              <span>{floor.name}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">
+                          {room.name}
+                        </h3>
+                        {room.number && (
+                          <span className="text-xs text-slate-500 dark:text-slate-400 block mt-1 font-mono font-semibold">
+                            Identificação: {room.number}
+                          </span>
+                        )}
                       </div>
-                      <h3 className="text-xl font-black text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">
-                        {s.name}
-                      </h3>
-                      <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
-                        Toque para imprimir ficha
+
+                      <div className="flex items-center justify-between pt-3 mt-4 border-t border-slate-200 dark:border-slate-800/80">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                          {linkedServices.length > 0
+                            ? `${linkedServices.length} serviço${linkedServices.length > 1 ? 's' : ''} nesta sala`
+                            : 'Serviços gerais'}
+                        </span>
+                        <div className="text-cyan-600 dark:text-cyan-400 font-bold text-xs flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                          <span>Acessar</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+
+                {/* Opção para Serviços Gerais da Unidade */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedRoomId('GENERAL')}
+                  className="group p-6 rounded-3xl card-boom text-left hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer border border-dashed border-slate-300 dark:border-slate-700 hover:border-cyan-500/60 flex flex-col justify-between min-h-[150px] shadow-sm hover:shadow-lg"
+                >
+                  <div>
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center text-slate-600 dark:text-slate-300 group-hover:scale-110 group-hover:bg-gradient-to-tr group-hover:from-cyan-500 group-hover:to-blue-600 group-hover:text-white transition-all shadow-xs mb-3">
+                      <Layers className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">
+                      Atendimento Geral
+                    </h3>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 block mt-1">
+                      Serviços de recepção ou não vinculados a salas
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 mt-4 border-t border-slate-200 dark:border-slate-800/80">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Balcão principal
+                    </span>
+                    <div className="text-cyan-600 dark:text-cyan-400 font-bold text-xs flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      <span>Acessar</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ========================================================
+              ETAPA 2: SERVIÇOS DA SALA SELECIONADA + EMISSÃO
+          ======================================================== */
+          <div className="space-y-6 animate-fade-in">
+            {/* Breadcrumb e Controle de Sala Selecionada */}
+            {hasRooms && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-3xl bg-slate-100 dark:bg-slate-900/80 border border-slate-300 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRoomId(null)}
+                    className="p-2.5 rounded-2xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-300 dark:border-slate-700 text-xs font-bold flex items-center space-x-1.5 transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer"
+                    title="Voltar à seleção de salas"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Trocar Sala</span>
+                  </button>
+
+                  <div className="text-left leading-tight">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                      Sala Selecionada:
+                    </span>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {selectedRoomFloor && (
+                        <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/30 flex items-center gap-1">
+                          <Building className="w-3 h-3" />
+                          <span>{selectedRoomFloor.name}</span>
+                        </span>
+                      )}
+                      <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/30 flex items-center gap-1">
+                        <DoorOpen className="w-3 h-3" />
+                        <span>{selectedRoom ? selectedRoom.name : 'Atendimento Geral'}</span>
                       </span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="p-3.5 rounded-2xl bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border border-cyan-500/30 group-hover:bg-gradient-to-r group-hover:from-cyan-500 group-hover:to-blue-600 group-hover:text-white group-hover:border-transparent transition-all shadow-xs">
-                    <Printer className="w-6 h-6" />
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRoomId(null)}
+                  className="text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer self-end sm:self-auto"
+                >
+                  Ver todas as salas →
                 </button>
-              )
-            })}
+              </div>
+            )}
+
+            {/* Campo Opcional de Identificação para Fala */}
+            <div className="card-boom p-6">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center space-x-2 mb-2">
+                <User className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                <span>Nome do Cidadão / Paciente (Opcional - anunciado no painel por voz)</span>
+              </label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Digite seu nome (Ex: João da Silva)..."
+                className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 font-medium text-lg focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all shadow-inner"
+              />
+            </div>
+
+            {/* Seleção de Prioridade (Abas Específicas por Cor) */}
+            <div className="space-y-3">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-cyan-500" />
+                <span>{hasRooms ? '2.1' : '1'}. Selecione o Tipo de Atendimento:</span>
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                {priorities.map((p) => {
+                  const isSelected = selectedPriority?.id === p.id
+                  const vis = getPriorityVisuals(p)
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedPriority(p)}
+                      className={`p-5 rounded-2xl text-left transition-all ${
+                        isSelected ? vis.activeClass : vis.inactiveClass
+                      } active:scale-[0.98] shadow-xs cursor-pointer`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2.5">
+                          <span
+                            className={`w-3.5 h-3.5 rounded-full ${vis.dotClass} shadow-xs`}
+                            style={{ backgroundColor: p.colorHex || undefined }}
+                          />
+                          <span className="font-black text-slate-900 dark:text-white text-base">{p.name}</span>
+                        </div>
+
+                        {isSelected && (
+                          <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-black uppercase tracking-wider shadow-xs badge-selected">
+                            Selecionado
+                          </span>
+                        )}
+                      </div>
+
+                      <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider block mb-1.5 w-fit ${vis.pillClass}`}>
+                        {vis.tag}
+                      </span>
+
+                      {p.description && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                          {p.description}
+                        </p>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Seleção do Serviço (Botões Grandes de Toque) */}
+            <div className="space-y-3">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>
+                  {hasRooms ? '2.2' : '2'}. Toque no Serviço para Imprimir / Emitir a Senha:
+                </span>
+              </span>
+
+              {eligibleServices.length === 0 ? (
+                <div className="p-8 text-center rounded-3xl bg-slate-100 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-800 space-y-3">
+                  <Layers className="w-10 h-10 text-slate-400 mx-auto" />
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                    Nenhum serviço disponível no momento para esta sala.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRoomId(null)}
+                    className="px-4 py-2 rounded-2xl bg-cyan-500 text-slate-950 text-xs font-black cursor-pointer shadow-md"
+                  >
+                    Voltar e escolher outra sala
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {eligibleServices.map((s) => {
+                    const vis = getServiceVisuals(s.name)
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        disabled={isPending || !selectedPriority}
+                        onClick={() => handleIssue(s, selectedPriority!)}
+                        className={`group p-6 rounded-3xl card-boom ${vis.cardClass} flex items-center justify-between text-left active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-md`}
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700/60 flex items-center justify-center group-hover:scale-110 group-hover:rotate-1 transition-all shadow-xs">
+                            {vis.icon}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-mono text-cyan-800 dark:text-cyan-400 font-black px-2 py-0.5 rounded-md bg-cyan-100 dark:bg-cyan-500/10 border border-cyan-300 dark:border-cyan-500/20">
+                                Prefixo: {s.prefix}
+                              </span>
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">
+                              {s.name}
+                            </h3>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
+                              Toque para emitir ficha
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border border-cyan-500/30 group-hover:bg-gradient-to-r group-hover:from-cyan-500 group-hover:to-blue-600 group-hover:text-white group-hover:border-transparent transition-all shadow-xs">
+                          <Printer className="w-6 h-6" />
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       {/* Modal / Feedback de Senha Emitida */}
@@ -488,12 +773,24 @@ export default function TriagemTotemPage() {
                 </div>
               </div>
 
-              {/* Informações da Fila e Serviço */}
+              {/* Informações da Fila, Serviço e Localização */}
               <div className="py-3 border-b border-dashed border-slate-300 text-xs space-y-1.5 text-slate-700">
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">SERVIÇO:</span>
                   <span className="font-bold text-slate-900 text-right">{issuedTicket.serviceName}</span>
                 </div>
+
+                {/* Destino em Cascata no Cupom (Andar e Sala) */}
+                {(issuedTicket.roomName || issuedTicket.floorName) && (
+                  <div className="flex justify-between">
+                    <span className="font-semibold text-slate-500">DESTINO:</span>
+                    <span className="font-bold text-indigo-900 text-right">
+                      {issuedTicket.floorName ? `${issuedTicket.floorName} • ` : ''}
+                      {issuedTicket.roomName}
+                    </span>
+                  </div>
+                )}
+
                 {issuedTicket.customerName && (
                   <div className="flex justify-between">
                     <span className="font-semibold text-slate-500">CIDADÃO:</span>
@@ -526,7 +823,7 @@ export default function TriagemTotemPage() {
               <button
                 type="button"
                 onClick={handlePrintTicket}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-xl shadow-emerald-500/20 active:scale-[0.99]"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-xl shadow-emerald-500/20 active:scale-[0.99] cursor-pointer"
               >
                 <Printer className="w-5 h-5" />
                 <span>Imprimir Senha</span>
@@ -535,7 +832,7 @@ export default function TriagemTotemPage() {
               <button
                 type="button"
                 onClick={() => setIssuedTicket(null)}
-                className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all"
+                className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
               >
                 Concluir / Emitir Nova Senha
               </button>
@@ -585,6 +882,15 @@ export default function TriagemTotemPage() {
                 <span className="font-bold">SERVIÇO: </span>
                 <span>{issuedTicket.serviceName}</span>
               </div>
+              {(issuedTicket.roomName || issuedTicket.floorName) && (
+                <div>
+                  <span className="font-bold">DESTINO: </span>
+                  <span>
+                    {issuedTicket.floorName ? `${issuedTicket.floorName} - ` : ''}
+                    {issuedTicket.roomName}
+                  </span>
+                </div>
+              )}
               {issuedTicket.customerName && (
                 <div>
                   <span className="font-bold">CIDADÃO: </span>
