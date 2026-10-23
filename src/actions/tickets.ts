@@ -1,6 +1,6 @@
 'use server'
 
-import { eq, and, desc, asc, inArray, sql, lte, gte, lt, or, isNull } from 'drizzle-orm'
+import { eq, and, desc, asc, inArray, sql, lte, gte, lt, or, isNull, isNotNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { tickets, dailyCounters, services, priorities, locations, ticketsHistory, units, users, rooms, floors } from '@/lib/db/schema'
 import { publishPanelEvent } from '@/lib/redis'
@@ -32,8 +32,25 @@ export async function getUnitData(unitId?: string) {
     return null
   }
 
-  const [activeServices, activePriorities, activeLocations, waitingTickets, unitFloors, unitRooms] = await Promise.all([
-    db.select().from(services).where(and(eq(services.unitId, unit.id), eq(services.active, true))).orderBy(asc(services.name)),
+  const [rawServices, activePriorities, activeLocations, waitingTickets, unitFloors, unitRooms] = await Promise.all([
+    db
+      .select({
+        id: services.id,
+        unitId: services.unitId,
+        roomId: services.roomId,
+        userId: services.userId,
+        name: services.name,
+        prefix: services.prefix,
+        weight: services.weight,
+        active: services.active,
+        metadata: services.metadata,
+        createdAt: services.createdAt,
+        attendantName: users.name,
+      })
+      .from(services)
+      .leftJoin(users, eq(services.userId, users.id))
+      .where(and(eq(services.unitId, unit.id), eq(services.active, true)))
+      .orderBy(asc(services.name)),
     db.select().from(priorities).where(eq(priorities.active, true)).orderBy(asc(priorities.id)),
     db
       .select({
@@ -55,6 +72,32 @@ export async function getUnitData(unitId?: string) {
     db.select().from(floors).where(and(eq(floors.unitId, unit.id), eq(floors.active, true))).orderBy(asc(floors.number)),
     db.select().from(rooms).where(and(eq(rooms.unitId, unit.id), eq(rooms.active, true))).orderBy(asc(rooms.name)),
   ])
+
+  // Resolve a sala e o posto onde o atendente específico do serviço está lotado
+  const activeServices = rawServices.map((s) => {
+    let effectiveRoomId = s.roomId || null
+    let attendantLocationName: string | null = null
+    let attendantRoomName: string | null = null
+
+    if (s.userId) {
+      const loc = activeLocations.find((l) => l.currentUserId === s.userId)
+      if (loc) {
+        attendantLocationName = `${loc.name} ${loc.number.toString().padStart(2, '0')}`
+        if (loc.roomId) {
+          effectiveRoomId = loc.roomId
+          attendantRoomName = loc.roomName || null
+        }
+      }
+    }
+
+    return {
+      ...s,
+      roomId: effectiveRoomId,
+      attendantName: s.attendantName || null,
+      locationName: attendantLocationName,
+      roomName: attendantRoomName,
+    }
+  })
 
   return {
     unit,
@@ -165,6 +208,7 @@ export async function issueTicket(input: IssueTicketInput) {
       priorityColor: priority?.colorHex || '#06B6D4',
       customerName: input.customerName || null,
       createdAt: newTicket.createdAt,
+      assignedUserId: service.userId || null,
     },
   })
 
@@ -257,6 +301,32 @@ export async function callNextTicket(params: {
     .where(eq(units.id, params.unitId))
     .limit(1)
 
+  // 1.1 Identifica serviços elegíveis para este atendente e posto
+  const eligibleData = await getAttendantEligibleServices({
+    unitId: params.unitId,
+    locationId: params.locationId,
+    userId: params.userId,
+  })
+  const eligibleServiceIds = eligibleData.eligibleServices.map((s) => s.id)
+
+  if (eligibleServiceIds.length === 0) {
+    return {
+      success: false,
+      message: 'Nenhum serviço elegível para o seu posto de atendimento no momento.',
+    }
+  }
+
+  const allowedServiceIds = params.serviceIds && params.serviceIds.length > 0
+    ? params.serviceIds.filter((id) => eligibleServiceIds.includes(id))
+    : eligibleServiceIds
+
+  if (allowedServiceIds.length === 0) {
+    return {
+      success: false,
+      message: 'Você não possui permissão para chamar os serviços especificados.',
+    }
+  }
+
   const meta = (unitRecord?.metadata as any) || {}
   const attendanceConfig = meta.attendanceConfig || {}
   const effectiveMode: 'PRIORITY' | 'INTERLEAVED' =
@@ -290,9 +360,11 @@ export async function callNextTicket(params: {
             eq(tickets.unitId, params.unitId),
             eq(tickets.status, 'ISSUED'),
             eq(priorities.weight, targetWeight),
-            params.serviceIds && params.serviceIds.length > 0
-              ? inArray(tickets.serviceId, params.serviceIds)
-              : undefined
+            inArray(tickets.serviceId, allowedServiceIds),
+            or(
+              isNull(services.userId),
+              params.userId ? eq(services.userId, params.userId) : sql`FALSE`
+            )
           )
         )
         .orderBy(asc(tickets.createdAt))
@@ -324,9 +396,11 @@ export async function callNextTicket(params: {
         and(
           eq(tickets.unitId, params.unitId),
           eq(tickets.status, 'ISSUED'),
-          params.serviceIds && params.serviceIds.length > 0
-            ? inArray(tickets.serviceId, params.serviceIds)
-            : undefined
+          inArray(tickets.serviceId, allowedServiceIds),
+          or(
+            isNull(services.userId),
+            params.userId ? eq(services.userId, params.userId) : sql`FALSE`
+          )
         )
       )
       .orderBy(desc(priorities.weight), asc(tickets.createdAt))
@@ -485,6 +559,14 @@ export async function callSpecificTicket(params: {
 
   if (!targetItem) {
     return { success: false, message: 'Esta senha não está mais disponível na fila.' }
+  }
+
+  // Validação: se o serviço for restrito a um atendente específico, apenas ele pode chamar
+  if (targetItem.service.userId && targetItem.service.userId !== params.userId) {
+    return {
+      success: false,
+      message: 'Esta senha pertence a um serviço exclusivo de outro atendente e só pode ser chamada por ele.',
+    }
   }
 
   const [location] = await db
@@ -1137,6 +1219,18 @@ export async function getAttendantEligibleServices(params: {
     roomId = loc?.roomId || null
   }
 
+  // Se não foi passado locationId ou o local não tinha sala definida, resolve pela lotação do usuário
+  if (!roomId && params.userId) {
+    const [userLoc] = await db
+      .select({ roomId: locations.roomId })
+      .from(locations)
+      .where(and(eq(locations.currentUserId, params.userId), eq(locations.active, true)))
+      .limit(1)
+    if (userLoc?.roomId) {
+      roomId = userLoc.roomId
+    }
+  }
+
   const allServices = await db
     .select({
       id: services.id,
@@ -1152,10 +1246,15 @@ export async function getAttendantEligibleServices(params: {
     .orderBy(asc(services.name))
 
   const eligibleServices = allServices.filter((s) => {
-    const isGlobal = !s.roomId && !s.userId
-    const matchesRoom = roomId && s.roomId === roomId
-    const matchesUser = params.userId && s.userId === params.userId
-    return isGlobal || matchesRoom || matchesUser
+    // 1. Se o serviço tem atendente exclusivo, apenas aquele atendente específico é elegível
+    if (s.userId) {
+      return Boolean(params.userId && s.userId === params.userId)
+    }
+
+    // 2. Se o serviço NÃO tem atendente exclusivo (geral da unidade ou da sala)
+    const isGlobal = !s.roomId
+    const matchesRoom = Boolean(roomId && s.roomId === roomId)
+    return isGlobal || matchesRoom
   })
 
   return {
@@ -1174,26 +1273,38 @@ export async function getAttendantQueueState(unitId: string, locationId?: string
   const eligibleServiceIds = eligibleData.eligibleServices.map((s) => s.id)
 
   const [waitingList, currentActive, pendingList, [unitRecord]] = await Promise.all([
-    db
-      .select({
-        id: tickets.id,
-        formattedTicket: tickets.formattedTicket,
-        ticketPrefix: tickets.ticketPrefix,
-        ticketNumber: tickets.ticketNumber,
-        customerName: tickets.customerName,
-        createdAt: tickets.createdAt,
-        serviceId: services.id,
-        serviceName: services.name,
-        priorityName: priorities.name,
-        priorityWeight: priorities.weight,
-        priorityColor: priorities.colorHex,
-      })
-      .from(tickets)
-      .innerJoin(services, eq(tickets.serviceId, services.id))
-      .innerJoin(priorities, eq(tickets.priorityId, priorities.id))
-      .where(and(eq(tickets.unitId, unitId), eq(tickets.status, 'ISSUED')))
-      .orderBy(desc(priorities.weight), asc(tickets.createdAt))
-      .limit(20),
+    eligibleServiceIds.length > 0
+      ? db
+          .select({
+            id: tickets.id,
+            formattedTicket: tickets.formattedTicket,
+            ticketPrefix: tickets.ticketPrefix,
+            ticketNumber: tickets.ticketNumber,
+            customerName: tickets.customerName,
+            createdAt: tickets.createdAt,
+            serviceId: services.id,
+            serviceName: services.name,
+            priorityName: priorities.name,
+            priorityWeight: priorities.weight,
+            priorityColor: priorities.colorHex,
+          })
+          .from(tickets)
+          .innerJoin(services, eq(tickets.serviceId, services.id))
+          .innerJoin(priorities, eq(tickets.priorityId, priorities.id))
+          .where(
+            and(
+              eq(tickets.unitId, unitId),
+              eq(tickets.status, 'ISSUED'),
+              inArray(tickets.serviceId, eligibleServiceIds),
+              or(
+                isNull(services.userId),
+                userId ? eq(services.userId, userId) : sql`FALSE`
+              )
+            )
+          )
+          .orderBy(desc(priorities.weight), asc(tickets.createdAt))
+          .limit(20)
+      : Promise.resolve([]),
 
     locationId
       ? db
