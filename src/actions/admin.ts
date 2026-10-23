@@ -268,6 +268,14 @@ export async function bindAttendantToLocation(locationId: string, userId: string
     .where(eq(locations.id, locationId))
     .returning()
 
+  // Se o usuário foi vinculado a um guichê que possui sala, sincroniza os serviços exclusivos desse atendente
+  if (userId && updated && updated.roomId) {
+    await db
+      .update(services)
+      .set({ roomId: updated.roomId })
+      .where(eq(services.userId, userId))
+  }
+
   return updated
 }
 
@@ -554,30 +562,64 @@ export async function resetUnitTicketCounter(params: {
  * 8. SERVIÇOS: Listar, Criar, Atualizar e Remover com Vinculação a Sala ou Usuário
  */
 export async function getServicesByUnit(unitId: string) {
-  const serviceList = await db
-    .select({
-      id: services.id,
-      unitId: services.unitId,
-      name: services.name,
-      prefix: services.prefix,
-      weight: services.weight,
-      active: services.active,
-      roomId: services.roomId,
-      userId: services.userId,
-      roomName: rooms.name,
-      roomNumber: rooms.number,
-      userName: users.name,
-      userRole: users.role,
-      metadata: services.metadata,
-      createdAt: services.createdAt,
-    })
-    .from(services)
-    .leftJoin(rooms, eq(services.roomId, rooms.id))
-    .leftJoin(users, eq(services.userId, users.id))
-    .where(eq(services.unitId, unitId))
-    .orderBy(asc(services.prefix))
+  const [serviceList, unitLocations] = await Promise.all([
+    db
+      .select({
+        id: services.id,
+        unitId: services.unitId,
+        name: services.name,
+        prefix: services.prefix,
+        weight: services.weight,
+        active: services.active,
+        roomId: services.roomId,
+        userId: services.userId,
+        roomName: rooms.name,
+        roomNumber: rooms.number,
+        userName: users.name,
+        userRole: users.role,
+        metadata: services.metadata,
+        createdAt: services.createdAt,
+      })
+      .from(services)
+      .leftJoin(rooms, eq(services.roomId, rooms.id))
+      .leftJoin(users, eq(services.userId, users.id))
+      .where(eq(services.unitId, unitId))
+      .orderBy(asc(services.prefix)),
+    db
+      .select({
+        id: locations.id,
+        name: locations.name,
+        number: locations.number,
+        roomId: locations.roomId,
+        currentUserId: locations.currentUserId,
+        roomName: rooms.name,
+      })
+      .from(locations)
+      .leftJoin(rooms, eq(locations.roomId, rooms.id))
+      .where(and(eq(locations.unitId, unitId), eq(locations.active, true))),
+  ])
 
-  return serviceList
+  // Enriquece serviços com atendente exclusivo indicando onde o atendente está lotado
+  return serviceList.map((s) => {
+    let attendantLocationText: string | null = null
+    let effectiveRoomName = s.roomName || null
+
+    if (s.userId) {
+      const loc = unitLocations.find((l) => l.currentUserId === s.userId)
+      if (loc) {
+        attendantLocationText = `${loc.name} ${loc.number.toString().padStart(2, '0')}`
+        if (!effectiveRoomName && loc.roomName) {
+          effectiveRoomName = loc.roomName
+        }
+      }
+    }
+
+    return {
+      ...s,
+      roomName: effectiveRoomName,
+      attendantLocationText,
+    }
+  })
 }
 
 export async function createService(data: {
@@ -588,6 +630,21 @@ export async function createService(data: {
   roomId?: string | null
   userId?: string | null
 }) {
+  let resolvedRoomId = data.roomId || null
+
+  // Se o serviço for restrito a um atendente e não informou sala, descobre a sala da lotação do atendente
+  if (data.userId && !resolvedRoomId) {
+    const [userLoc] = await db
+      .select({ roomId: locations.roomId })
+      .from(locations)
+      .where(and(eq(locations.currentUserId, data.userId), eq(locations.active, true)))
+      .limit(1)
+
+    if (userLoc?.roomId) {
+      resolvedRoomId = userLoc.roomId
+    }
+  }
+
   const [newService] = await db
     .insert(services)
     .values({
@@ -595,7 +652,7 @@ export async function createService(data: {
       name: data.name.trim(),
       prefix: data.prefix.toUpperCase().trim(),
       weight: data.weight || 1,
-      roomId: data.roomId || null,
+      roomId: resolvedRoomId,
       userId: data.userId || null,
       active: true,
       metadata: {},
@@ -613,13 +670,28 @@ export async function updateService(serviceId: string, data: {
   userId?: string | null
   active?: boolean
 }) {
+  let resolvedRoomId = data.roomId !== undefined ? data.roomId : null
+
+  // Se o serviço for restrito a um atendente e não informou sala, descobre a sala da lotação do atendente
+  if (data.userId && !resolvedRoomId) {
+    const [userLoc] = await db
+      .select({ roomId: locations.roomId })
+      .from(locations)
+      .where(and(eq(locations.currentUserId, data.userId), eq(locations.active, true)))
+      .limit(1)
+
+    if (userLoc?.roomId) {
+      resolvedRoomId = userLoc.roomId
+    }
+  }
+
   const [updated] = await db
     .update(services)
     .set({
       name: data.name.trim(),
       prefix: data.prefix.toUpperCase().trim(),
       weight: data.weight !== undefined ? data.weight : 1,
-      roomId: data.roomId !== undefined ? data.roomId : null,
+      roomId: resolvedRoomId,
       userId: data.userId !== undefined ? data.userId : null,
       active: data.active !== undefined ? data.active : true,
     })

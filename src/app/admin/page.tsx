@@ -276,14 +276,14 @@ export default function AdminPage() {
     setServiceName(s.name)
     setServicePrefix(s.prefix)
     setServiceWeight(s.weight || 1)
-    if (s.roomId) {
-      setServiceAssignmentType('ROOM')
-      setServiceRoomId(s.roomId)
-      setServiceUserId('')
-    } else if (s.userId) {
+    if (s.userId) {
       setServiceAssignmentType('USER')
       setServiceUserId(s.userId)
       setServiceRoomId('')
+    } else if (s.roomId) {
+      setServiceAssignmentType('ROOM')
+      setServiceRoomId(s.roomId)
+      setServiceUserId('')
     } else {
       setServiceAssignmentType('GLOBAL')
       setServiceRoomId('')
@@ -1775,23 +1775,46 @@ export default function AdminPage() {
                   </label>
 
                   {serviceAssignmentType === 'USER' && (
-                    <div className="pl-6 pt-1 animate-fade-in">
-                      <label className="text-[11px] font-bold text-slate-400 block mb-1">
-                        Selecione o Usuário
-                      </label>
-                      <select
-                        required={serviceAssignmentType === 'USER'}
-                        value={serviceUserId}
-                        onChange={(e) => setServiceUserId(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-500"
-                      >
-                        <option value="">Selecione um usuário...</option>
-                        {usersList.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name} ({u.email} - {u.role})
-                          </option>
-                        ))}
-                      </select>
+                    <div className="pl-6 pt-1 animate-fade-in space-y-2">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-400 block mb-1">
+                          Selecione o Usuário
+                        </label>
+                        <select
+                          required={serviceAssignmentType === 'USER'}
+                          value={serviceUserId}
+                          onChange={(e) => setServiceUserId(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        >
+                          <option value="">Selecione um usuário...</option>
+                          {usersList.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name} ({u.email} - {u.role})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {serviceUserId && (() => {
+                        const userLoc = locations.find((l) => l.currentUserId === serviceUserId)
+                        return (
+                          <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-cyan-400 shrink-0" />
+                            <span>
+                              {userLoc ? (
+                                <>
+                                  Lotado em: <strong>{userLoc.name} {userLoc.number.toString().padStart(2, '0')}</strong>
+                                  {userLoc.roomName ? ` (${userLoc.roomName})` : ' (Geral)'} — a opção de emissão de senha aparecerá na triagem deste local.
+                                </>
+                              ) : (
+                                <span className="text-amber-400">
+                                  Atendente não vinculado a guichê/mesa. O serviço aparecerá em &quot;Atendimento Geral&quot; até ser lotado em uma sala.
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        )
+                      })()}
                     </div>
                   )}
                 </div>
@@ -1841,15 +1864,21 @@ export default function AdminPage() {
                       </div>
 
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
-                        {s.roomName ? (
+                        {s.userName ? (
+                          <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            <span>Atendente: {s.userName}</span>
+                            {s.roomName && (
+                              <span className="text-cyan-300 font-semibold">• Sala: {s.roomName}</span>
+                            )}
+                            {s.attendantLocationText && (
+                              <span className="opacity-80">({s.attendantLocationText})</span>
+                            )}
+                          </span>
+                        ) : s.roomName ? (
                           <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1">
                             <DoorOpen className="w-3 h-3" />
                             Sala: {s.roomName}
-                          </span>
-                        ) : s.userName ? (
-                          <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            Usuário: {s.userName}
                           </span>
                         ) : (
                           <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
