@@ -10,6 +10,8 @@ export interface SpeechTicketInput {
   formattedTicket: string
   locationName?: string
   locationNumber?: number
+  floorName?: string | null
+  roomName?: string | null
   customerName?: string | null
   priorityName?: string
 }
@@ -136,6 +138,34 @@ export function naturalizeLocation(locationName?: string, locationNumber?: numbe
 }
 
 /**
+ * Formata o destino de atendimento em cascata (Andar -> Sala -> Posto/Mesa)
+ */
+export function formatLocationCascade(
+  floorName?: string | null,
+  roomName?: string | null,
+  locationName?: string | null,
+  locationNumber?: number | null
+): { formatted: string; place: string; short: string } {
+  const place = locationName && locationNumber !== null && locationNumber !== undefined
+    ? `${locationName} ${locationNumber.toString().padStart(2, '0')}`
+    : 'Guichê 01'
+  const short = locationNumber !== null && locationNumber !== undefined
+    ? locationNumber.toString().padStart(2, '0')
+    : '01'
+
+  const parts: string[] = []
+  if (floorName?.trim()) parts.push(floorName.trim())
+  if (roomName?.trim()) parts.push(roomName.trim())
+  parts.push(place)
+
+  return {
+    formatted: parts.join(' • '),
+    place,
+    short,
+  }
+}
+
+/**
  * Constrói as mensagens de áudio naturalizadas (SSML e Plain Text)
  */
 export function buildTicketAnnouncement(
@@ -157,25 +187,38 @@ export function buildTicketAnnouncement(
 
   const loc = naturalizeLocation(input.locationName, input.locationNumber)
 
-  // 1. Plain Text para Web Speech API
+  // Monta localização em cascata objetiva: Andar -> Sala -> Posto/Mesa
+  const cascadeParts: string[] = []
+  if (input.floorName && input.floorName.trim()) {
+    cascadeParts.push(input.floorName.trim())
+  }
+  if (input.roomName && input.roomName.trim()) {
+    cascadeParts.push(input.roomName.trim())
+  }
+  if (loc.spoken) {
+    cascadeParts.push(loc.spoken)
+  }
+  const destinationText = cascadeParts.join(', ')
+
+  // 1. Plain Text para Web Speech API (objetivo e em cascata)
   let plain = ''
   if (customerName && includeName) {
-    plain += `${customerName}, `
+    plain += `${customerName}: `
   }
-  plain += `${callPrefix}, `
+  plain += `${callPrefix} `
   if (prefix) {
     plain += `${prefix.split('').join(' ')}, `
   }
   plain += `${digitsSpoken}. `
-  if (loc.spoken) {
-    plain += `${callSuffix} ${loc.prep} ${loc.spoken}.`
+  if (destinationText) {
+    plain += `${destinationText}.`
   }
 
   // 2. SSML estruturado com cadência, breaks e ênfase para Edge-TTS
   let ssmlContent = ''
 
   if (customerName && includeName) {
-    ssmlContent += `<emphasis level="moderate">${customerName}</emphasis>, `
+    ssmlContent += `<emphasis level="moderate">${customerName}</emphasis>: `
     ssmlContent += `<break time="${pauseDuration}"/> `
   }
 
@@ -187,9 +230,9 @@ export function buildTicketAnnouncement(
   ssmlContent += `<break time="150ms"/> `
   ssmlContent += `<prosody rate="-5%">${digitsSpoken}</prosody>. `
 
-  if (loc.spoken) {
+  if (destinationText) {
     ssmlContent += `<break time="${pauseDuration}"/> `
-    ssmlContent += `${callSuffix} ${loc.prep} <emphasis level="moderate">${loc.spoken}</emphasis>.`
+    ssmlContent += `<emphasis level="moderate">${destinationText}</emphasis>.`
   }
 
   const ssml = `
