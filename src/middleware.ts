@@ -85,6 +85,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // 5. ROTA /perfil: Acessível por qualquer usuário autenticado (ADMIN, ATTENDANT, TRIAGE)
+  if (pathname.startsWith('/perfil')) {
+    if (!user) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    return NextResponse.next()
+  }
+
   return NextResponse.next()
 }
 
@@ -97,6 +107,7 @@ export const config = {
     '/triagem/:path*',
     '/atendimento/:path*',
     '/admin/:path*',
+    '/perfil/:path*',
     '/',
   ],
 }

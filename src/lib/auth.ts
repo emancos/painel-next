@@ -13,6 +13,7 @@ export interface SessionUser {
   name: string
   email: string
   role: string
+  avatarUrl?: string | null
 }
 
 /**
@@ -24,6 +25,7 @@ export async function createSession(user: SessionUser) {
     name: user.name,
     email: user.email,
     role: user.role,
+    avatarUrl: user.avatarUrl || null,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -43,6 +45,21 @@ export async function createSession(user: SessionUser) {
 }
 
 /**
+ * Atualiza os dados da sessão mantendo o cookie sincronizado.
+ */
+export async function updateUserSession(updatedData: Partial<SessionUser>) {
+  const currentUser = await getCurrentUser()
+  if (!currentUser) return null
+
+  const newSessionUser: SessionUser = {
+    ...currentUser,
+    ...updatedData,
+  }
+  await createSession(newSessionUser)
+  return newSessionUser
+}
+
+/**
  * Obtém o usuário atualmente autenticado a partir dos cookies.
  */
 export async function getCurrentUser(): Promise<SessionUser | null> {
@@ -58,6 +75,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       name: payload.name as string,
       email: payload.email as string,
       role: payload.role as string,
+      avatarUrl: (payload.avatarUrl as string) || null,
     }
   } catch {
     return null
@@ -90,6 +108,7 @@ export async function authenticateUser(email: string, password: string): Promise
     name: user.name,
     email: user.email,
     role: user.role,
+    avatarUrl: user.avatarUrl || null,
   }
 
   await createSession(sessionUser)
