@@ -70,6 +70,7 @@ import { speechManager } from '@/lib/speech'
 import { buildTicketAnnouncement } from '@/lib/speech-normalizer'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 import { UserNavbarBadge } from '@/components/UserNavbarBadge'
+import { getUserRoleBadge, formatRoleName } from '@/lib/roles'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -1582,7 +1583,7 @@ export default function AdminPage() {
                         <option value="">Vincular Atendente...</option>
                         {usersList.map((u) => (
                           <option key={u.id} value={u.id}>
-                            {u.name} ({u.role})
+                            {u.name} ({formatRoleName(u.role)})
                           </option>
                         ))}
                       </select>
@@ -1775,7 +1776,7 @@ export default function AdminPage() {
                           <option value="">Selecione um usuário...</option>
                           {usersList.map((u) => (
                             <option key={u.id} value={u.id}>
-                              {u.name} ({u.email} - {u.role})
+                              {u.name} ({u.email} - {formatRoleName(u.role)})
                             </option>
                           ))}
                         </select>
@@ -2000,28 +2001,30 @@ export default function AdminPage() {
           <div className="lg:col-span-7 p-6 rounded-3xl bg-slate-900/60 border border-slate-800 flex flex-col">
             <h3 className="text-lg font-bold text-white mb-4">Usuários Cadastrados no Sistema ({usersList.length})</h3>
             <div className="space-y-3 overflow-y-auto max-h-[550px]">
-              {usersList.map((u) => (
-                <div key={u.id} className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-800 text-cyan-400 flex items-center justify-center font-bold">
-                      {u.name.charAt(0)}
+              {usersList.map((u) => {
+                const roleBadge = getUserRoleBadge(u.role)
+                return (
+                  <div key={u.id} className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-800 text-cyan-400 flex items-center justify-center font-bold shrink-0 border border-slate-700">
+                        {u.avatarUrl ? (
+                          <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" />
+                        ) : (
+                          u.name.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-bold text-white text-sm block">{u.name}</span>
+                        <span className="text-xs text-slate-400">{u.email}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-bold text-white text-sm block">{u.name}</span>
-                      <span className="text-xs text-slate-400">{u.email}</span>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
-                        u.role === 'ADMIN'
-                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                          : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                      }`}
-                    >
-                      {u.role}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className={`text-xs px-2.5 py-1 rounded-full font-bold border shadow-xs ${roleBadge.badgeClass}`}
+                      >
+                        {roleBadge.label}
+                      </span>
 
                     <button
                       onClick={() => handleEditUser(u)}
@@ -2041,7 +2044,8 @@ export default function AdminPage() {
                     </button>
                   </div>
                 </div>
-              ))}
+              )
+            })}
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { LogOut } from 'lucide-react'
+import { formatRoleName } from '@/lib/roles'
 
 export interface UserNavbarBadgeProps {
   user: {
@@ -52,7 +53,7 @@ export function UserNavbarBadge({
             {user.name}
           </span>
           <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono block">
-            {user.role}
+            {formatRoleName(user.role)}
           </span>
         </div>
       </Link>
