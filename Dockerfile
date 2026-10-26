@@ -44,8 +44,8 @@ RUN adduser --system --uid 1001 nextjs
 # Copia arquivos estáticos públicos do builder com a propriedade do usuário nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Garante a existência e permissões de escrita na pasta de logos
-RUN mkdir -p /app/public/logos && chown -R nextjs:nodejs /app/public
+# Garante a existência e permissões de escrita nas pastas de uploads (logos e avatares)
+RUN mkdir -p /app/public/logos /app/public/avatars && chown -R nextjs:nodejs /app/public
 
 # Garante node_modules completos para scripts utilitários (seed, migrate, etc)
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules

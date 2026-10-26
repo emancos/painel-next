@@ -21,6 +21,8 @@ services:
     volumes:
       # Persistência de logos e brasões enviados pelos administradores
       - ./data/uploads:/app/public/logos
+      # Persistência de fotos e avatares dos usuários
+      - ./data/avatars:/app/public/avatars
     depends_on:
       postgres:
         condition: service_healthy
