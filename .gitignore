@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 # Ignora imagens salvas localmente mantendo a estrutura de pastas no Git
 public/logos/*
 !public/logos/.gitkeep
+public/avatars/*
+!public/avatars/.gitkeep
+data/
