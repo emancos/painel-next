@@ -26,6 +26,7 @@ import {
 import Link from 'next/link'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 import { UserNavbarBadge } from '@/components/UserNavbarBadge'
+import { setDocumentFavicon } from '@/lib/favicon'
 
 interface ServiceItem {
   id: string
@@ -111,6 +112,9 @@ export default function TriagemTotemPage() {
       .then((data: any) => {
         if (!data) return
         setUnit(data.unit)
+        if (data.unit?.logoUrl) {
+          setDocumentFavicon(data.unit.logoUrl)
+        }
         setServices(data.services || [])
         setPriorities(data.priorities || [])
         if (data.floors) setFloors(data.floors)

@@ -48,6 +48,7 @@ import {
 import Link from 'next/link'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 import { UserNavbarBadge } from '@/components/UserNavbarBadge'
+import { setDocumentFavicon } from '@/lib/favicon'
 import { AttendantNotificationControls } from '@/components/atendimento/AttendantNotificationControls'
 import { AttendantTicketToast } from '@/components/atendimento/AttendantTicketToast'
 import {
@@ -188,6 +189,9 @@ export default function AtendimentoPage() {
     getUnitData().then((data) => {
       if (!data) return
       setUnit(data.unit)
+      if (data.unit?.logoUrl) {
+        setDocumentFavicon(data.unit.logoUrl)
+      }
       setLocations((data.locations || []) as unknown as LocationItem[])
       setPrioritiesList(data.priorities || [])
     })

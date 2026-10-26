@@ -7,6 +7,7 @@ import { TicketHistory, HistoryTicketItem } from '@/components/panel/TicketHisto
 import { DigitalClock } from '@/components/panel/DigitalClock'
 import { speechManager } from '@/lib/speech'
 import { getOperationalDate } from '@/lib/operational-cycle'
+import { setDocumentFavicon } from '@/lib/favicon'
 import {
   Volume2,
   VolumeX,
@@ -135,7 +136,10 @@ export default function TVPanelPage({ params }: PanelPageProps) {
       const data = await res.json()
       if (data.unit?.name) setUnitName(data.unit.name)
       if (data.unit?.subtitle) setUnitSubtitle(data.unit.subtitle)
-      if (data.unit?.logoUrl) setUnitLogoUrl(data.unit.logoUrl)
+      if (data.unit?.logoUrl) {
+        setUnitLogoUrl(data.unit.logoUrl)
+        setDocumentFavicon(data.unit.logoUrl)
+      }
       if (data.unit?.timezone) setUnitTimezone(data.unit.timezone)
 
       if (data.unit) {

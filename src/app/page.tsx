@@ -20,6 +20,7 @@ import { getUnitData } from '@/actions/tickets'
 import { getSessionAction, logoutAction } from '@/actions/auth'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 import { UserNavbarBadge } from '@/components/UserNavbarBadge'
+import { setDocumentFavicon } from '@/lib/favicon'
 
 export default function HomePage() {
   const [unitId, setUnitId] = useState<string>('baa07eef-927f-4e15-9e0f-626885b6b1c8')
@@ -40,6 +41,9 @@ export default function HomePage() {
         setUnitSubtitle(data.unit.subtitle || null)
         setUnitLogoUrl(data.unit.logoUrl || null)
         setWaitingCount(data.waitingCount)
+        if (data.unit.logoUrl) {
+          setDocumentFavicon(data.unit.logoUrl)
+        }
       }
     })
   }, [])

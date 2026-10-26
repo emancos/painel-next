@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Outfit } from 'next/font/google'
 import '@/styles/globals.css'
+import { getSystemFavicon } from '@/lib/favicon-server'
+import { DynamicFavicon } from '@/components/DynamicFavicon'
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -8,19 +10,42 @@ const outfit = Outfit({
   display: 'swap',
 })
 
-export const metadata: Metadata = {
-  title: 'Painel de Chamados Inteligente',
-  description: 'Sistema modernizado de senhas de atendimento com síntese de voz neural e tempo real.',
+export async function generateMetadata(): Promise<Metadata> {
+  const faviconUrl = await getSystemFavicon()
+
+  return {
+    title: 'Painel de Chamados Inteligente',
+    description: 'Sistema modernizado de senhas de atendimento com síntese de voz neural e tempo real.',
+    icons: {
+      icon: [
+        {
+          url: faviconUrl,
+          type: faviconUrl.endsWith('.svg')
+            ? 'image/svg+xml'
+            : faviconUrl.endsWith('.png')
+            ? 'image/png'
+            : faviconUrl.endsWith('.jpg') || faviconUrl.endsWith('.jpeg')
+            ? 'image/jpeg'
+            : 'image/x-icon',
+        },
+      ],
+      shortcut: faviconUrl,
+      apple: faviconUrl,
+    },
+  }
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const faviconUrl = await getSystemFavicon()
+
   return (
     <html lang="pt-BR" className={outfit.variable} data-admin-theme="dark" suppressHydrationWarning>
       <head>
+        <DynamicFavicon initialIcon={faviconUrl} />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function() {

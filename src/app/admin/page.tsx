@@ -71,6 +71,7 @@ import { buildTicketAnnouncement } from '@/lib/speech-normalizer'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 import { UserNavbarBadge } from '@/components/UserNavbarBadge'
 import { getUserRoleBadge, formatRoleName } from '@/lib/roles'
+import { setDocumentFavicon } from '@/lib/favicon'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -187,6 +188,10 @@ export default function AdminPage() {
       const activeId = selectedUnitId || uList[0].id
       setSelectedUnitId(activeId)
       loadUnitStructure(activeId)
+      const activeUnit = uList.find((u) => u.id === activeId) || uList[0]
+      if (activeUnit?.logoUrl) {
+        setDocumentFavicon(activeUnit.logoUrl)
+      }
     }
   }
 
@@ -446,6 +451,8 @@ export default function AdminPage() {
       const data = await res.json()
       if (res.ok && data.url) {
         setUnitLogoUrl(data.url)
+        setDocumentFavicon(data.url)
+        window.dispatchEvent(new CustomEvent('unit-logo-changed', { detail: { logoUrl: data.url } }))
         setFeedback({ type: 'success', message: 'Logo enviada e salva em public/logos com sucesso!' })
       } else {
         setFeedback({ type: 'error', message: data.error || 'Falha no upload do logo.' })
