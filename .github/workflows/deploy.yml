@@ -72,8 +72,12 @@ jobs:
             export GITHUB_REPOSITORY=${{ github.repository }}
             cd /opt/painel-next
             
-            # Cria pasta persistente para uploads de brasões/logos
-            mkdir -p ./data/uploads
+            # Cria pastas persistentes para uploads de brasões e avatares
+            mkdir -p ./data/uploads ./data/avatars
+            
+            # Ajusta permissões dos volumes para o usuário do container (UID 1001)
+            sudo chown -R 1001:1001 ./data 2>/dev/null || chown -R 1001:1001 ./data 2>/dev/null || true
+            sudo chmod -R 775 ./data 2>/dev/null || chmod -R 775 ./data 2>/dev/null || true
             
             # Autentica o docker da VPS com o GitHub Container Registry
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
