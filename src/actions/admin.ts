@@ -289,6 +289,7 @@ export async function getUsersList() {
       name: users.name,
       email: users.email,
       role: users.role,
+      avatarUrl: users.avatarUrl,
       active: users.active,
       createdAt: users.createdAt,
     })
@@ -318,6 +319,7 @@ export async function createUser(data: {
       name: users.name,
       email: users.email,
       role: users.role,
+      avatarUrl: users.avatarUrl,
       active: users.active,
       createdAt: users.createdAt,
     })
@@ -355,6 +357,7 @@ export async function updateUser(userId: string, data: {
       name: users.name,
       email: users.email,
       role: users.role,
+      avatarUrl: users.avatarUrl,
       active: users.active,
       createdAt: users.createdAt,
     })

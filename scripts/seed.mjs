@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import bcrypt from 'bcryptjs'
-import { pgTable, uuid, varchar, smallint, boolean, timestamp, jsonb, integer } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, smallint, boolean, timestamp, jsonb, integer, text } from 'drizzle-orm/pg-core'
 
 const connectionString = process.env.DATABASE_URL
 if (!connectionString) {
@@ -47,6 +47,7 @@ const users = pgTable('users', {
   email: varchar('email', { length: 150 }).notNull(),
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   role: varchar('role', { length: 20 }).default('ATTENDANT').notNull(),
+  avatarUrl: text('avatar_url'),
   active: boolean('active').default(true).notNull(),
 })
 
