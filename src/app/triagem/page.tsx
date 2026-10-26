@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
+import { UserNavbarBadge } from '@/components/UserNavbarBadge'
 
 interface ServiceItem {
   id: string
@@ -74,7 +75,7 @@ interface IssuedTicketModalData {
 
 export default function TriagemTotemPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string } | null>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string; avatarUrl?: string | null } | null>(null)
   const [isAuthChecking, setIsAuthChecking] = useState(true)
   const [unit, setUnit] = useState<{ id: string; name: string; subtitle?: string | null; logoUrl?: string | null } | null>(null)
   const [services, setServices] = useState<ServiceItem[]>([])
@@ -328,15 +329,7 @@ export default function TriagemTotemPage() {
           <AdminThemeToggle />
 
           {currentUser && (
-            <div className="h-11 px-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-800 hidden sm:flex items-center space-x-2 shrink-0 shadow-xs">
-              <UserCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-              <div className="text-left text-xs leading-tight">
-                <span className="font-bold text-slate-900 dark:text-white block">{currentUser.name}</span>
-                <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono block">
-                  {currentUser.role === 'TRIAGE' ? 'Operador de Triagem' : currentUser.role}
-                </span>
-              </div>
-            </div>
+            <UserNavbarBadge user={currentUser} showLogout={false} />
           )}
 
           {/* Atalho para Painel de Chamadas TV */}

@@ -47,6 +47,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
+import { UserNavbarBadge } from '@/components/UserNavbarBadge'
 import { AttendantNotificationControls } from '@/components/atendimento/AttendantNotificationControls'
 import { AttendantTicketToast } from '@/components/atendimento/AttendantTicketToast'
 import {
@@ -102,7 +103,7 @@ interface EligibleServiceItem {
 
 export default function AtendimentoPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string } | null>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string; avatarUrl?: string | null } | null>(null)
   const [unit, setUnit] = useState<{ id: string; name: string } | null>(null)
   const [locations, setLocations] = useState<LocationItem[]>([])
   const [selectedLocationId, setSelectedLocationId] = useState<string>('')
@@ -661,22 +662,8 @@ export default function AtendimentoPage() {
             </Link>
           )}
 
-          <div className="h-11 px-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 flex items-center space-x-2.5 shrink-0 shadow-xs">
-            <div className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 flex items-center justify-center font-bold text-xs">
-              {currentUser.name.charAt(0)}
-            </div>
-            <div className="text-left text-xs leading-tight">
-              <span className="font-bold text-slate-900 dark:text-white block truncate max-w-[120px]">{currentUser.name}</span>
-              <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono">{currentUser.role}</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="p-1.5 text-slate-400 hover:text-rose-500 ml-1 transition-colors"
-              title="Encerrar Turno (Logout)"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+          {/* Identificação do Usuário com Link para Perfil e Avatar */}
+          <UserNavbarBadge user={currentUser} onLogout={handleLogout} />
 
           {/* Guichê / Sala / Ambulatório ao qual o usuário está vinculado */}
           {userLocations.length > 1 ? (

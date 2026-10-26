@@ -69,10 +69,11 @@ import { getSessionAction, logoutAction } from '@/actions/auth'
 import { speechManager } from '@/lib/speech'
 import { buildTicketAnnouncement } from '@/lib/speech-normalizer'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
+import { UserNavbarBadge } from '@/components/UserNavbarBadge'
 
 export default function AdminPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string } | null>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string; avatarUrl?: string | null } | null>(null)
   const [activeTab, setActiveTab] = useState<'UNITS' | 'STRUCTURE' | 'LOCATIONS' | 'SERVICES' | 'USERS' | 'SPEECH' | 'ATTENDANCE'>('UNITS')
   const [isPending, startTransition] = useTransition()
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -801,24 +802,9 @@ export default function AdminPage() {
           {/* Alternador de Tema Claro / Escuro (Admin) */}
           <AdminThemeToggle />
 
-          {/* Administrador Logado */}
+          {/* Administrador Logado com Link para Perfil e Avatar */}
           {currentUser && (
-            <div className="flex items-center h-11 space-x-3 bg-slate-100 dark:bg-slate-900/80 px-3.5 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-xs">
-              <div className="w-7 h-7 rounded-full bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 flex items-center justify-center font-bold text-xs shrink-0">
-                {currentUser.name.charAt(0)}
-              </div>
-              <div className="text-left leading-tight">
-                <span className="text-xs font-bold text-slate-900 dark:text-white block truncate max-w-[120px]">{currentUser.name}</span>
-                <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono">{currentUser.role}</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors ml-1"
-                title="Sair do Sistema"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
+            <UserNavbarBadge user={currentUser} onLogout={handleLogout} />
           )}
         </div>
       </header>

@@ -17,7 +17,9 @@ import {
   Radio
 } from 'lucide-react'
 import { getUnitData } from '@/actions/tickets'
+import { getSessionAction, logoutAction } from '@/actions/auth'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
+import { UserNavbarBadge } from '@/components/UserNavbarBadge'
 
 export default function HomePage() {
   const [unitId, setUnitId] = useState<string>('baa07eef-927f-4e15-9e0f-626885b6b1c8')
@@ -25,8 +27,12 @@ export default function HomePage() {
   const [unitSubtitle, setUnitSubtitle] = useState<string | null>(null)
   const [unitLogoUrl, setUnitLogoUrl] = useState<string | null>(null)
   const [waitingCount, setWaitingCount] = useState<number>(0)
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string; avatarUrl?: string | null } | null>(null)
 
   useEffect(() => {
+    getSessionAction().then((u) => {
+      if (u) setCurrentUser(u)
+    })
     getUnitData().then((data) => {
       if (data && data.unit) {
         setUnitId(data.unit.id)
@@ -76,13 +82,23 @@ export default function HomePage() {
 
         <div className="flex items-center space-x-3 shrink-0">
           <AdminThemeToggle />
-          <Link
-            href="/login"
-            className="h-11 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white border border-slate-300 dark:border-slate-700/80 text-xs font-bold transition-all flex items-center space-x-2 shrink-0 shadow-xs active:scale-95"
-          >
-            <LogInIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-            <span>Login Operador</span>
-          </Link>
+          {currentUser ? (
+            <UserNavbarBadge
+              user={currentUser}
+              onLogout={async () => {
+                await logoutAction()
+                setCurrentUser(null)
+              }}
+            />
+          ) : (
+            <Link
+              href="/login"
+              className="h-11 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white border border-slate-300 dark:border-slate-700/80 text-xs font-bold transition-all flex items-center space-x-2 shrink-0 shadow-xs active:scale-95"
+            >
+              <LogInIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+              <span>Login Operador</span>
+            </Link>
+          )}
 
           <Link
             href={`/painel/${unitId}`}
