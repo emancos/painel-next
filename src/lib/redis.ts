@@ -63,6 +63,7 @@ export interface PanelEvent<T = unknown> {
     | 'TICKET_CALLED'
     | 'TICKET_UPDATED'
     | 'TICKET_FINISHED'
+    | 'TICKET_CANCELLED'
     | 'CONFIG_CHANGED'
     | 'TICKET_PLAYING'
     | 'TICKET_PLAYED'

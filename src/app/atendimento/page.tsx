@@ -43,7 +43,8 @@ import {
   X,
   AlertTriangle,
   Briefcase,
-  Volume2
+  Volume2,
+  XCircle
 } from 'lucide-react'
 import Link from 'next/link'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
@@ -405,7 +406,7 @@ export default function AtendimentoPage() {
               setAttendanceConfig(parsed.payload.attendanceConfig)
             }
             refreshQueue(unit.id, selectedLocationId, currentUser.id)
-          } else if (parsed.type === 'TICKET_CALLED' || parsed.type === 'TICKET_FINISHED') {
+          } else if (parsed.type === 'TICKET_CALLED' || parsed.type === 'TICKET_FINISHED' || parsed.type === 'TICKET_CANCELLED') {
             refreshQueue(unit.id, selectedLocationId, currentUser.id)
           }
         } catch (err) {
@@ -1298,7 +1299,8 @@ export default function AtendimentoPage() {
               historyItems.map((h) => {
                 const isSolved = h.resolution === 'SOLVED'
                 const isPendingRes = h.resolution === 'PENDING'
-                const isRedirected = h.status === 'REDIRECTED'
+                const isRedirected = h.status === 'REDIRECTED' || Boolean((h.metadata as any)?.wasRedirected)
+                const isCancelled = (h.status === 'CANCELLED' || h.resolution === 'CANCELLED') && !isRedirected
                 const isNoShow = h.status === 'NO_SHOW'
 
                 return (
@@ -1332,14 +1334,19 @@ export default function AtendimentoPage() {
                             <Clock className="w-3 h-3" /> Pendente
                           </span>
                         )}
-                        {h.resolution === 'UNSOLVED' && !isRedirected && (
+                        {h.resolution === 'UNSOLVED' && !isRedirected && !isCancelled && (
                           <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
                             <X className="w-3 h-3" /> Não Resolvido
                           </span>
                         )}
                         {isRedirected && (
                           <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-                            <ArrowRightLeft className="w-3 h-3" /> Redirecionado
+                            <ArrowRightLeft className="w-3 h-3" /> Cancelada (Redirecionada)
+                          </span>
+                        )}
+                        {isCancelled && (
+                          <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                            <XCircle className="w-3 h-3" /> Cancelada
                           </span>
                         )}
                         {isNoShow && (

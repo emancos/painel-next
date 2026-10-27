@@ -980,13 +980,23 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
       ? Math.max(0, Math.round((new Date(row.calledAt).getTime() - new Date(row.createdAt).getTime()) / 1000))
       : null
 
-    const serviceTime = row.finishedAt && row.startedAt
-      ? Math.max(0, Math.round((new Date(row.finishedAt).getTime() - new Date(row.startedAt).getTime()) / 1000))
-      : null
+    const isCancelled = row.status === 'CANCELLED' || row.status === 'REDIRECTED'
+    const serviceTime = isCancelled
+      ? 0
+      : row.finishedAt && row.startedAt
+        ? Math.max(0, Math.round((new Date(row.finishedAt).getTime() - new Date(row.startedAt).getTime()) / 1000))
+        : null
 
     const total = row.finishedAt && row.createdAt
       ? Math.max(0, Math.round((new Date(row.finishedAt).getTime() - new Date(row.createdAt).getTime()) / 1000))
       : null
+
+    const meta = (row.metadata as any) || {}
+    const observationText = meta.cancelReason
+      ? `Motivo: ${meta.cancelReason}`
+      : meta.redirectReason
+        ? `Redirecionamento: ${meta.redirectReason}`
+        : meta.observation || null
 
     itemsMap.set(row.id, {
       id: row.id,
@@ -1018,7 +1028,7 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
       attendantName: row.attendantName,
       unitId: row.unitId,
       unitName: row.unitName,
-      observation: (row.metadata as any)?.observation || null,
+      observation: observationText,
     })
   }
 
@@ -1068,7 +1078,7 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
   for (const t of items) {
     if (t.status === 'FINISHED') summary.finished++
     else if (t.status === 'NO_SHOW') summary.noShow++
-    else if (t.status === 'CANCELLED') summary.cancelled++
+    else if (t.status === 'CANCELLED' || t.status === 'REDIRECTED') summary.cancelled++
     else if (t.status === 'IN_PROGRESS' || t.status === 'CALLED') summary.inProgress++
     else if (t.status === 'ISSUED') summary.waiting++
 
@@ -1077,15 +1087,21 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
       totalWaitCount++
     }
 
-    if (t.serviceTimeSeconds !== null && t.serviceTimeSeconds >= 0) {
+    // Apenas atendimentos concluídos compõem o TMA
+    if (t.status === 'FINISHED' && t.serviceTimeSeconds !== null && t.serviceTimeSeconds >= 0) {
       totalServiceSum += t.serviceTimeSeconds
       totalServiceCount++
     }
 
     summary.byPriority[t.priorityName] = (summary.byPriority[t.priorityName] || 0) + 1
-    summary.byService[t.serviceName] = (summary.byService[t.serviceName] || 0) + 1
-    const rName = t.roomName || 'Atendimento Geral'
-    summary.byRoom[rName] = (summary.byRoom[rName] || 0) + 1
+
+    // Apenas atendimentos concluídos contam para a distribuição por Serviço e Sala,
+    // garantindo que senhas redirecionadas/canceladas não constem como atendidas pelo serviço/sala
+    if (t.status === 'FINISHED') {
+      summary.byService[t.serviceName] = (summary.byService[t.serviceName] || 0) + 1
+      const rName = t.roomName || 'Atendimento Geral'
+      summary.byRoom[rName] = (summary.byRoom[rName] || 0) + 1
+    }
   }
 
   summary.avgWaitSeconds = totalWaitCount > 0 ? Math.round(totalWaitSum / totalWaitCount) : 0

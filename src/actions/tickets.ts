@@ -1652,6 +1652,9 @@ export async function redirectTicket(params: {
   }
 
   const finishedAt = new Date()
+  const reasonText = params.reason?.trim() || 'Erro na triagem'
+
+  // Grava atendimento da senha anterior como CANCELADO para não distorcer estatísticas e relatórios do serviço/sala original
   await db.insert(ticketsHistory).values({
     id: current.id,
     unitId: current.unitId,
@@ -1662,17 +1665,25 @@ export async function redirectTicket(params: {
     ticketNumber: current.ticketNumber,
     ticketPrefix: current.ticketPrefix,
     formattedTicket: current.formattedTicket,
-    status: 'REDIRECTED',
-    resolution: 'UNSOLVED',
+    status: 'CANCELLED',
+    resolution: 'CANCELLED',
     customerName: current.customerName,
     customerDoc: current.customerDoc,
     createdAt: current.createdAt,
     calledAt: current.calledAt,
     startedAt: current.startedAt,
     finishedAt,
+    waitTimeSeconds: current.calledAt
+      ? Math.max(0, Math.floor((current.calledAt.getTime() - current.createdAt.getTime()) / 1000))
+      : 0,
+    serviceTimeSeconds: 0,
+    totalTimeSeconds: Math.max(0, Math.floor((finishedAt.getTime() - current.createdAt.getTime()) / 1000)),
     metadata: {
       ...(current.metadata as any),
-      redirectReason: params.reason?.trim() || 'Erro na triagem',
+      cancelReason: `Redirecionamento: ${reasonText}`,
+      redirectReason: reasonText,
+      observation: `Cancelada por redirecionamento: ${reasonText}`,
+      wasRedirected: true,
       targetServiceId: params.targetServiceId,
       redirectedByUserId: params.attendantUserId,
     },
@@ -1680,6 +1691,18 @@ export async function redirectTicket(params: {
 
   // Remove senha anterior das ativas
   await db.delete(tickets).where(eq(tickets.id, current.id))
+
+  // Notifica o cancelamento da senha anterior em tempo real
+  await publishPanelEvent(params.unitId, {
+    type: 'TICKET_CANCELLED',
+    timestamp: new Date().toISOString(),
+    payload: {
+      ticketId: current.id,
+      formattedTicket: current.formattedTicket,
+      serviceId: current.serviceId,
+      reason: `Redirecionamento: ${reasonText}`,
+    },
+  })
 
   // Emite nova senha para a fila com o serviço corrigido
   const newTicket = await issueTicket({
@@ -1695,6 +1718,84 @@ export async function redirectTicket(params: {
     previousFormattedTicket: current.formattedTicket,
     newTicket,
   }
+}
+
+/**
+ * Cancela uma senha recém-emitida diretamente na triagem ou modal de impressão
+ * com justificativa obrigatória de pelo menos 8 caracteres.
+ */
+export async function cancelIssuedTicket(params: {
+  ticketId: string
+  unitId: string
+  reason: string
+  userId?: string
+}) {
+  const reason = params.reason?.trim()
+  if (!reason || reason.length < 8) {
+    return {
+      success: false,
+      message: 'A justificativa de cancelamento é obrigatória e deve conter pelo menos 8 caracteres.',
+    }
+  }
+
+  const [current] = await db
+    .select()
+    .from(tickets)
+    .where(and(eq(tickets.id, params.ticketId), eq(tickets.unitId, params.unitId)))
+    .limit(1)
+
+  if (!current) {
+    return { success: false, message: 'Senha não encontrada ou já encerrada/cancelada.' }
+  }
+
+  const finishedAt = new Date()
+
+  await db.insert(ticketsHistory).values({
+    id: current.id,
+    unitId: current.unitId,
+    serviceId: current.serviceId,
+    priorityId: current.priorityId,
+    locationId: current.locationId,
+    userId: params.userId || current.userId,
+    ticketNumber: current.ticketNumber,
+    ticketPrefix: current.ticketPrefix,
+    formattedTicket: current.formattedTicket,
+    status: 'CANCELLED',
+    resolution: 'CANCELLED',
+    customerName: current.customerName,
+    customerDoc: current.customerDoc,
+    createdAt: current.createdAt,
+    calledAt: current.calledAt,
+    startedAt: current.startedAt,
+    finishedAt,
+    waitTimeSeconds: 0,
+    serviceTimeSeconds: 0,
+    totalTimeSeconds: Math.max(0, Math.floor((finishedAt.getTime() - current.createdAt.getTime()) / 1000)),
+    metadata: {
+      ...(current.metadata as any),
+      cancelReason: reason,
+      observation: `Cancelada na emissão/triagem: ${reason}`,
+      cancelledAt: finishedAt.toISOString(),
+      cancelledByUserId: params.userId || null,
+    },
+  })
+
+  // Remove da tabela de senhas ativas
+  await db.delete(tickets).where(eq(tickets.id, current.id))
+
+  // Notifica atendentes e painéis em tempo real
+  await publishPanelEvent(params.unitId, {
+    type: 'TICKET_CANCELLED',
+    timestamp: new Date().toISOString(),
+    payload: {
+      ticketId: current.id,
+      formattedTicket: current.formattedTicket,
+      serviceId: current.serviceId,
+      reason,
+    },
+  })
+
+  return { success: true, message: `Senha ${current.formattedTicket} cancelada com sucesso.` }
 }
 
 /**

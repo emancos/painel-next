@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { getUnitData, issueTicket } from '@/actions/tickets'
+import { getUnitData, issueTicket, cancelIssuedTicket } from '@/actions/tickets'
 import { getSessionAction, logoutAction } from '@/actions/auth'
 import {
   Ticket,
@@ -22,6 +22,8 @@ import {
   DoorOpen,
   ChevronRight,
   MapPin,
+  XCircle,
+  AlertTriangle,
 } from 'lucide-react'
 import Link from 'next/link'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
@@ -61,6 +63,8 @@ interface RoomItem {
 }
 
 interface IssuedTicketModalData {
+  ticketId: string
+  unitId: string
   formattedTicket: string
   serviceName: string
   priorityName: string
@@ -92,6 +96,14 @@ export default function TriagemTotemPage() {
   const [customerName, setCustomerName] = useState('')
   const [selectedPriority, setSelectedPriority] = useState<PriorityItem | null>(null)
   const [issuedTicket, setIssuedTicket] = useState<IssuedTicketModalData | null>(null)
+
+  // Estados para cancelamento da senha no modal de impressão
+  const [showCancelPrompt, setShowCancelPrompt] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelError, setCancelError] = useState<string | null>(null)
+  const [cancelSuccessMsg, setCancelSuccessMsg] = useState<string | null>(null)
+  const [isCancelling, setIsCancelling] = useState(false)
+
   const [isPending, startTransition] = useTransition()
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -158,6 +170,10 @@ export default function TriagemTotemPage() {
   const handleIssue = (service: ServiceItem, priority: PriorityItem) => {
     if (!unit) return
     setErrorMsg(null)
+    setShowCancelPrompt(false)
+    setCancelReason('')
+    setCancelError(null)
+    setCancelSuccessMsg(null)
 
     startTransition(async () => {
       try {
@@ -169,6 +185,8 @@ export default function TriagemTotemPage() {
         })
 
         setIssuedTicket({
+          ticketId: res.id,
+          unitId: unit.id,
           formattedTicket: res.formattedTicket,
           serviceName: res.serviceName,
           priorityName: res.priorityName,
@@ -192,6 +210,43 @@ export default function TriagemTotemPage() {
 
   const handlePrintTicket = () => {
     window.print()
+  }
+
+  const handleConfirmCancelTicket = async () => {
+    if (!issuedTicket) return
+    const reason = cancelReason.trim()
+    if (reason.length < 8) {
+      setCancelError('A justificativa de cancelamento é obrigatória e deve conter pelo menos 8 caracteres.')
+      return
+    }
+
+    setIsCancelling(true)
+    setCancelError(null)
+
+    try {
+      const res = await cancelIssuedTicket({
+        ticketId: issuedTicket.ticketId,
+        unitId: issuedTicket.unitId,
+        reason,
+        userId: currentUser?.id,
+      })
+
+      if (res.success) {
+        setCancelSuccessMsg(`Senha ${issuedTicket.formattedTicket} cancelada com sucesso!`)
+        setTimeout(() => {
+          setIssuedTicket(null)
+          setShowCancelPrompt(false)
+          setCancelReason('')
+          setCancelSuccessMsg(null)
+        }, 1200)
+      } else {
+        setCancelError(res.message || 'Erro ao cancelar a senha.')
+      }
+    } catch (err) {
+      setCancelError((err as Error).message || 'Falha ao processar cancelamento.')
+    } finally {
+      setIsCancelling(false)
+    }
   }
 
   const getServiceVisuals = (name: string) => {
@@ -808,25 +863,143 @@ export default function TriagemTotemPage() {
               </div>
             </div>
 
-            {/* Ações: Imprimir Térmica e Concluir */}
-            <div className="space-y-2.5 pt-1">
-              <button
-                type="button"
-                onClick={handlePrintTicket}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-xl shadow-emerald-500/20 active:scale-[0.99] cursor-pointer"
-              >
-                <Printer className="w-5 h-5" />
-                <span>Imprimir Senha</span>
-              </button>
+            {/* Mensagem de Sucesso no Cancelamento */}
+            {cancelSuccessMsg && (
+              <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 animate-fade-in shadow-lg">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <span>{cancelSuccessMsg}</span>
+              </div>
+            )}
 
-              <button
-                type="button"
-                onClick={() => setIssuedTicket(null)}
-                className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
-              >
-                Concluir / Emitir Nova Senha
-              </button>
-            </div>
+            {/* Painel de Justificativa de Cancelamento */}
+            {showCancelPrompt && !cancelSuccessMsg ? (
+              <div className="space-y-3 p-4 rounded-2xl bg-rose-950/40 border border-rose-900/60 text-left animate-fade-in">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0 mt-0.5">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div className="space-y-0.5 min-w-0">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-rose-200">
+                      Cancelar Senha {issuedTicket.formattedTicket}
+                    </h4>
+                    <p className="text-[11px] text-rose-300/80 leading-snug">
+                      A senha será removida da fila. Justificativa obrigatória (mínimo de 8 caracteres):
+                    </p>
+                  </div>
+                </div>
+
+                {cancelError && (
+                  <div className="p-2.5 rounded-xl bg-rose-900/50 border border-rose-700/60 text-xs text-rose-200 font-semibold flex items-center gap-2">
+                    <XCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                    <span>{cancelError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <label htmlFor="cancel-reason-input" className="font-bold text-slate-300 flex items-center gap-1">
+                      <span>Motivo do Cancelamento</span>
+                      <span className="text-rose-400">*</span>
+                    </label>
+                    <span
+                      className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
+                        cancelReason.trim().length >= 8
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      }`}
+                    >
+                      {cancelReason.trim().length} / 8 mín.
+                    </span>
+                  </div>
+
+                  <textarea
+                    id="cancel-reason-input"
+                    value={cancelReason}
+                    onChange={(e) => {
+                      setCancelReason(e.target.value)
+                      if (cancelError && e.target.value.trim().length >= 8) {
+                        setCancelError(null)
+                      }
+                    }}
+                    rows={3}
+                    placeholder="Descreva o motivo do cancelamento... (mínimo de 8 caracteres)"
+                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs placeholder:text-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 resize-none font-sans"
+                    disabled={isCancelling}
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCancelPrompt(false)
+                      setCancelReason('')
+                      setCancelError(null)
+                    }}
+                    disabled={isCancelling}
+                    className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmCancelTicket}
+                    disabled={cancelReason.trim().length < 8 || isCancelling}
+                    className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-lg shadow-rose-600/30 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {isCancelling ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Cancelando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-4 h-4" />
+                        <span>Confirmar Cancelamento</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : !cancelSuccessMsg ? (
+              /* Ações Padrão: Imprimir Térmica, Cancelar Senha e Concluir */
+              <div className="space-y-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={handlePrintTicket}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-xl shadow-emerald-500/20 active:scale-[0.99] cursor-pointer"
+                >
+                  <Printer className="w-5 h-5" />
+                  <span>Imprimir Senha</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCancelPrompt(true)
+                    setCancelReason('')
+                    setCancelError(null)
+                  }}
+                  className="w-full py-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all cursor-pointer active:scale-[0.99]"
+                >
+                  <XCircle className="w-4 h-4 text-rose-400" />
+                  <span>Cancelar Senha</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIssuedTicket(null)
+                    setShowCancelPrompt(false)
+                    setCancelReason('')
+                  }}
+                  className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  Concluir / Emitir Nova Senha
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       )}
