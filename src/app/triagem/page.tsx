@@ -26,6 +26,7 @@ import {
 import Link from 'next/link'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 import { UserNavbarBadge } from '@/components/UserNavbarBadge'
+import { NavbarShortcuts } from '@/components/NavbarShortcuts'
 import { setDocumentFavicon } from '@/lib/favicon'
 
 interface ServiceItem {
@@ -278,7 +279,7 @@ export default function TriagemTotemPage() {
           {currentUser?.role === 'ADMIN' ? (
             <Link
               href="/admin"
-              className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all shadow-xs hover:scale-105"
+              className="h-11 w-11 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all shadow-xs hover:scale-105 flex items-center justify-center shrink-0"
               title="Voltar ao Painel Administrativo"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -286,14 +287,14 @@ export default function TriagemTotemPage() {
           ) : currentUser?.role === 'ATTENDANT' ? (
             <Link
               href="/atendimento"
-              className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all shadow-xs hover:scale-105"
+              className="h-11 w-11 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all shadow-xs hover:scale-105 flex items-center justify-center shrink-0"
               title="Voltar ao Atendimento"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
           ) : (
             <div
-              className="p-3 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 shadow-xs"
+              className="h-11 w-11 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 shadow-xs flex items-center justify-center shrink-0"
               title="Posto de Triagem e Recepção Autorizado"
             >
               <Ticket className="w-5 h-5" />
@@ -304,60 +305,41 @@ export default function TriagemTotemPage() {
             <img
               src={unit.logoUrl}
               alt="Logo"
-              className="w-12 h-12 object-contain rounded-2xl bg-white/10 p-1.5 border border-slate-300 dark:border-slate-700 shadow-md transition-transform hover:scale-105"
+              className="w-10 sm:w-12 h-10 sm:h-12 object-contain rounded-2xl bg-white/10 p-1.5 border border-slate-300 dark:border-slate-700 shadow-md transition-transform hover:scale-105 shrink-0"
             />
           ) : (
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-cyan-500/30">
+            <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-cyan-500/30 shrink-0">
               {unit?.name?.charAt(0) || 'U'}
             </div>
           )}
 
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center space-x-2">
-              <h1 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-base sm:text-lg md:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 truncate">
                 {unit?.name || 'Unidade de Atendimento'}
               </h1>
-              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold uppercase shadow-xs">
-                Totem de Emissão
+              <span className="text-[9px] sm:text-[10px] px-2 sm:px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold uppercase shadow-xs shrink-0">
+                Totem
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
               {unit?.subtitle || 'Toque no serviço desejado para emitir sua senha'}
             </p>
           </div>
         </div>
 
-        {/* Informações do Operador Autenticado e Ações Rápidas */}
-        <div className="flex items-center space-x-3 shrink-0 self-end md:self-auto flex-wrap gap-y-2">
-          {/* Alternador de Tema Claro / Escuro (Admin/Sistema) */}
+        {/* Informações do Operador Autenticado e Atalhos */}
+        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 flex-wrap gap-y-2 w-full md:w-auto justify-between md:justify-end">
+          {/* Atalhos Dinâmicos de Navegação por Perfil */}
+          <NavbarShortcuts user={currentUser} unitId={unit?.id} />
+
+          {/* Alternador de Tema Claro / Escuro */}
           <AdminThemeToggle />
 
+          {/* Identificação do Usuário */}
           {currentUser && (
-            <UserNavbarBadge user={currentUser} showLogout={false} />
+            <UserNavbarBadge user={currentUser} onLogout={handleLogout} />
           )}
-
-          {/* Atalho para Painel de Chamadas TV */}
-          {unit?.id && (
-            <Link
-              href={`/painel/${unit.id}`}
-              target="_blank"
-              className="h-11 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white border border-slate-300 dark:border-slate-800 text-xs font-bold transition-all shadow-xs flex items-center space-x-2 shrink-0 active:scale-95"
-              title="Abrir Painel de Chamadas da TV"
-            >
-              <Tv className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-              <span className="hidden lg:inline">Painel TV</span>
-            </Link>
-          )}
-
-          {/* Botão Sair / Logout */}
-          <button
-            onClick={handleLogout}
-            className="h-11 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 text-xs font-bold transition-all shadow-xs flex items-center space-x-2 shrink-0 active:scale-95 cursor-pointer"
-            title="Encerrar Sessão"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sair</span>
-          </button>
         </div>
       </header>
 
@@ -725,8 +707,8 @@ export default function TriagemTotemPage() {
 
       {/* Modal / Feedback de Senha Emitida */}
       {issuedTicket && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 text-center space-y-5 shadow-2xl animate-fade-in relative overflow-hidden my-auto">
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 text-center space-y-4 sm:space-y-5 shadow-2xl animate-fade-in relative overflow-hidden my-auto max-h-[92vh] overflow-y-auto">
             <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">

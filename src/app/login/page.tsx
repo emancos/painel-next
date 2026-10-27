@@ -113,8 +113,8 @@ export default function LoginPage() {
       </header>
 
       {/* Miolo de Login */}
-      <main className="max-w-md w-full mx-auto my-auto space-y-6 relative z-10 py-6">
-        <div className="p-8 rounded-3xl bg-white/95 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+      <main className="max-w-md w-full mx-auto my-auto space-y-6 relative z-10 py-4 sm:py-6 px-2 sm:px-0">
+        <div className="p-5 sm:p-8 rounded-3xl bg-white/95 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-2xl backdrop-blur-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-400/10 dark:bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
 
           <div className="text-center space-y-2 mb-6">

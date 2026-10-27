@@ -51,6 +51,7 @@ import { UserNavbarBadge } from '@/components/UserNavbarBadge'
 import { setDocumentFavicon } from '@/lib/favicon'
 import { AttendantNotificationControls } from '@/components/atendimento/AttendantNotificationControls'
 import { AttendantTicketToast } from '@/components/atendimento/AttendantTicketToast'
+import { NavbarShortcuts } from '@/components/NavbarShortcuts'
 import {
   attendantNotificationManager,
   IssuedTicketNotificationData,
@@ -684,8 +685,8 @@ export default function AtendimentoPage() {
       />
 
       {/* Topo do Módulo do Atendente */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4 mb-6 relative z-30">
-        <div className="flex items-center space-x-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between pb-5 border-b border-slate-200 dark:border-slate-800 gap-3.5 mb-6 relative z-30">
+        <div className="flex items-center space-x-3 sm:space-x-4">
           <Link
             href="/"
             className="h-11 w-11 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all flex items-center justify-center shrink-0 shadow-xs hover:scale-105"
@@ -693,49 +694,40 @@ export default function AtendimentoPage() {
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 truncate">
               Painel do Atendente{' '}
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold shadow-xs">
-                Operador Conectado
+              <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold shadow-xs shrink-0">
+                Operador
               </span>
             </h1>
-            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 truncate">
               {unit?.name || 'Unidade Central Matriz'} • Gestão de Fila e Chamadas
             </p>
           </div>
         </div>
 
-        {/* Controles de Topo: Botão Admin (se ADMIN), Seletor de Guichê e Usuário */}
-        <div className="flex items-center space-x-3 shrink-0 flex-wrap gap-y-2">
+        {/* Controles de Topo: Atalhos, Notificações, Tema, Usuário e Posto */}
+        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 flex-wrap gap-y-2 w-full md:w-auto justify-between md:justify-end">
+          {/* Atalhos de Navegação por Perfil */}
+          <NavbarShortcuts user={currentUser} unitId={unit?.id} />
+
           {/* Notificações Sonoras e Visuais para Novas Senhas */}
           <AttendantNotificationControls eligibleServicesCount={eligibleServices.length} />
 
-          {/* Alternador de Tema Claro / Escuro (Admin/Sistema) */}
+          {/* Alternador de Tema Claro / Escuro */}
           <AdminThemeToggle />
 
-          {/* Atalho para Admin caso o usuário logado tenha perfil ADMIN */}
-          {currentUser.role === 'ADMIN' && (
-            <Link
-              href="/admin"
-              className="h-11 px-4 rounded-2xl bg-cyan-500/15 hover:bg-cyan-500 text-cyan-700 dark:text-cyan-300 hover:text-slate-950 border border-cyan-500/30 font-bold text-xs transition-all shadow-xs active:scale-95 flex items-center space-x-2 shrink-0"
-              title="Acessar Painel Administrativo Global"
-            >
-              <ShieldCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-              <span>Painel Admin</span>
-            </Link>
-          )}
-
-          {/* Identificação do Usuário com Link para Perfil e Avatar */}
+          {/* Identificação do Usuário */}
           <UserNavbarBadge user={currentUser} onLogout={handleLogout} />
 
-          {/* Guichê / Sala / Ambulatório ao qual o usuário está vinculado */}
+          {/* Guichê / Sala / Posto */}
           {userLocations.length > 1 ? (
             <div className="flex items-center shrink-0">
               <select
                 value={selectedLocationId}
                 onChange={(e) => setSelectedLocationId(e.target.value)}
-                className="h-11 px-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-cyan-300 font-bold text-sm focus:outline-none focus:border-cyan-500 shrink-0 shadow-xs"
+                className="h-10 sm:h-11 px-3 sm:px-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-cyan-300 font-bold text-xs sm:text-sm focus:outline-none focus:border-cyan-500 shrink-0 shadow-xs max-w-[200px] truncate"
               >
                 {userLocations.map((loc) => (
                   <option key={loc.id} value={loc.id}>
@@ -745,23 +737,23 @@ export default function AtendimentoPage() {
               </select>
             </div>
           ) : selectedLocation ? (
-            <div className="h-11 px-4 rounded-2xl bg-cyan-500/15 border border-cyan-500/35 text-cyan-800 dark:text-cyan-300 flex items-center space-x-2.5 shrink-0 shadow-xs">
+            <div className="h-10 sm:h-11 px-3 sm:px-4 rounded-2xl bg-cyan-500/15 border border-cyan-500/35 text-cyan-800 dark:text-cyan-300 flex items-center space-x-2 shrink-0 shadow-xs">
               <DoorOpen className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
               <div className="text-left leading-tight">
-                <span className="font-mono font-bold text-sm text-slate-900 dark:text-white block">
+                <span className="font-mono font-bold text-xs sm:text-sm text-slate-900 dark:text-white block">
                   {selectedLocation.name} {selectedLocation.number.toString().padStart(2, '0')}
                 </span>
                 {selectedLocation.roomName && (
-                  <span className="text-[10px] text-cyan-600 dark:text-cyan-400/90 block font-medium">
+                  <span className="text-[9px] sm:text-[10px] text-cyan-600 dark:text-cyan-400/90 block font-medium max-w-[120px] truncate">
                     {selectedLocation.roomName}
                   </span>
                 )}
               </div>
             </div>
           ) : (
-            <div className="h-11 px-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center space-x-2 shrink-0">
-              <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
-              <span>Sem posto vinculado</span>
+            <div className="h-10 sm:h-11 px-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center space-x-1.5 shrink-0">
+              <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>Sem posto</span>
             </div>
           )}
         </div>
@@ -905,7 +897,7 @@ export default function AtendimentoPage() {
                     </span>
 
                     {/* Número Gigante da Senha com Gradiente e Contraste Impressionante */}
-                    <div className="font-mono text-7xl sm:text-8xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-700 dark:from-cyan-400 dark:via-sky-300 dark:to-emerald-400 tracking-tight leading-none drop-shadow-[0_4px_16px_rgba(8,145,178,0.2)] dark:drop-shadow-[0_0_40px_rgba(6,182,212,0.4)]">
+                    <div className="font-mono text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-700 dark:from-cyan-400 dark:via-sky-300 dark:to-emerald-400 tracking-tight leading-none drop-shadow-[0_4px_16px_rgba(8,145,178,0.2)] dark:drop-shadow-[0_0_40px_rgba(6,182,212,0.4)]">
                       {currentTicket.formattedTicket}
                     </div>
 

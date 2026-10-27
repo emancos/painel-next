@@ -1,8 +1,15 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Outfit } from 'next/font/google'
 import '@/styles/globals.css'
 import { getSystemFavicon } from '@/lib/favicon-server'
 import { DynamicFavicon } from '@/components/DynamicFavicon'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+}
 
 const outfit = Outfit({
   subsets: ['latin'],
