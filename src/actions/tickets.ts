@@ -99,6 +99,17 @@ export async function getUnitData(unitId?: string) {
     }
   })
 
+  const unitMeta = (unit?.metadata as any) || {}
+  const unitCfg = unitMeta.attendanceConfig || {}
+  const attendanceConfig = {
+    defaultOrderMode: (unitCfg.defaultOrderMode as 'PRIORITY' | 'INTERLEAVED') || 'PRIORITY',
+    allowManualQueueSelection: unitCfg.allowManualQueueSelection ?? true,
+    autoResetEnabled: unitCfg.autoResetEnabled ?? true,
+    autoResetTime: unitCfg.autoResetTime || '00:00',
+    autoResetClearQueue: unitCfg.autoResetClearQueue ?? false,
+    lastManualResetAt: unitCfg.lastManualResetAt || null,
+  }
+
   return {
     unit,
     services: activeServices,
@@ -107,6 +118,7 @@ export async function getUnitData(unitId?: string) {
     floors: unitFloors,
     rooms: unitRooms,
     waitingCount: waitingTickets[0]?.count || 0,
+    attendanceConfig,
   }
 }
 
@@ -164,7 +176,49 @@ export async function issueTicket(input: IssueTicketInput) {
   const ticketNumber = counter.currentNumber
   const formattedTicket = `${service.prefix}${ticketNumber.toString().padStart(3, '0')}`
 
-  // 3. Inserir a nova senha na fila
+  // 3. Quantidade de pessoas à frente com separação estrita por sala ou serviço específico
+  // Regra A: Se o serviço for vinculado a um usuário específico da sala, conta apenas a fila deste serviço
+  // Regra B: Se o serviço for vinculado a uma sala (sem usuário exclusivo), conta apenas a fila dos serviços gerais da sala (onde userId IS NULL)
+  // Regra C: Se o serviço for geral (sem sala e sem usuário), conta apenas a fila deste serviço geral
+  let targetServiceIds: string[] = [service.id]
+
+  if (service.userId) {
+    targetServiceIds = [service.id]
+  } else if (service.roomId) {
+    const roomServices = await db
+      .select({ id: services.id })
+      .from(services)
+      .where(
+        and(
+          eq(services.unitId, input.unitId),
+          eq(services.roomId, service.roomId),
+          isNull(services.userId),
+          eq(services.active, true)
+        )
+      )
+
+    if (roomServices.length > 0) {
+      targetServiceIds = roomServices.map((s) => s.id)
+    }
+  } else {
+    targetServiceIds = [service.id]
+  }
+
+  // Contagem atômica das pessoas à frente ANTES de inserir a nova senha na fila
+  const [ahead] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.unitId, input.unitId),
+        eq(tickets.status, 'ISSUED'),
+        inArray(tickets.serviceId, targetServiceIds)
+      )
+    )
+
+  const peopleAhead = ahead?.count ?? 0
+
+  // 4. Inserir a nova senha na fila
   const [newTicket] = await db
     .insert(tickets)
     .values({
@@ -180,17 +234,16 @@ export async function issueTicket(input: IssueTicketInput) {
     })
     .returning()
 
-  // 4. Quantidade de pessoas à frente
-  const [ahead] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(tickets)
-    .where(
-      and(
-        eq(tickets.unitId, input.unitId),
-        eq(tickets.status, 'ISSUED'),
-        lte(tickets.createdAt, newTicket.createdAt)
-      )
-    )
+  // 4.1 Identifica nome da sala se o serviço for vinculado a uma sala
+  let serviceRoomName: string | null = null
+  if (service.roomId) {
+    const [roomRecord] = await db
+      .select({ name: rooms.name })
+      .from(rooms)
+      .where(eq(rooms.id, service.roomId))
+      .limit(1)
+    serviceRoomName = roomRecord?.name || null
+  }
 
   // 5. Notifica atendentes e painéis em tempo real
   await publishPanelEvent(input.unitId, {
@@ -203,6 +256,8 @@ export async function issueTicket(input: IssueTicketInput) {
       ticketNumber,
       serviceId: input.serviceId,
       serviceName: service.name,
+      roomId: service.roomId || null,
+      roomName: serviceRoomName,
       priorityId: input.priorityId,
       priorityName: priority?.name || 'Normal',
       priorityColor: priority?.colorHex || '#06B6D4',
@@ -215,9 +270,11 @@ export async function issueTicket(input: IssueTicketInput) {
   return {
     ...newTicket,
     serviceName: service.name,
+    roomId: service.roomId || null,
+    roomName: serviceRoomName,
     priorityName: priority?.name || 'Normal',
     priorityColor: priority?.colorHex || '#06B6D4',
-    peopleAhead: ahead?.count || 1,
+    peopleAhead,
   }
 }
 
@@ -258,6 +315,83 @@ async function resolveEffectiveRoomAndFloor(
   }
 
   return { roomName: null, floorName: null }
+}
+
+/**
+ * Intercala senhas em espera conforme a regra de ciclo 1:1:1 (Urgência -> Prioritário -> Convencional).
+ * Garante que a primeira senha do resultado seja a próxima a ser chamada.
+ */
+function interleaveWaitingTickets<T extends { priorityWeight: number; createdAt: Date }>(
+  ticketsList: T[],
+  lastWeight?: number
+): T[] {
+  if (ticketsList.length <= 1) return ticketsList
+
+  // Separa em buckets por peso de prioridade, preservando a ordem cronológica de chegada
+  const buckets = new Map<number, T[]>()
+  for (const t of ticketsList) {
+    if (!buckets.has(t.priorityWeight)) {
+      buckets.set(t.priorityWeight, [])
+    }
+    buckets.get(t.priorityWeight)!.push(t)
+  }
+
+  // Pesos disponíveis entre as senhas aguardando ordenados decrescentes
+  const availableWeights = Array.from(buckets.keys()).sort((a, b) => b - a)
+  if (availableWeights.length <= 1) return ticketsList
+
+  // Ciclo base padrão (3 Urgência, 2 Prioritário, 1 Convencional) + qualquer peso adicional existente
+  const cycleOrder = [3, 2, 1]
+  const fullWeights = Array.from(new Set([...cycleOrder, ...availableWeights]))
+
+  let currentLast = lastWeight
+  const result: T[] = []
+  const total = ticketsList.length
+
+  while (result.length < total) {
+    // Determina a sequência circular de busca a partir do último peso chamado
+    let searchSequence: number[] = []
+    if (currentLast === undefined) {
+      searchSequence = [...fullWeights]
+    } else {
+      const idx = fullWeights.indexOf(currentLast)
+      if (idx === -1) {
+        searchSequence = [...fullWeights]
+      } else {
+        searchSequence = [
+          ...fullWeights.slice(idx + 1),
+          ...fullWeights.slice(0, idx + 1),
+        ]
+      }
+    }
+
+    // Seleciona a primeira categoria do ciclo que possui senha aguardando
+    let picked = false
+    for (const w of searchSequence) {
+      const bucket = buckets.get(w)
+      if (bucket && bucket.length > 0) {
+        const item = bucket.shift()!
+        result.push(item)
+        currentLast = w
+        picked = true
+        break
+      }
+    }
+
+    if (!picked) {
+      // Fallback de segurança se nenhuma regra casar
+      for (const bucket of buckets.values()) {
+        if (bucket.length > 0) {
+          const item = bucket.shift()!
+          result.push(item)
+          currentLast = item.priorityWeight
+          break
+        }
+      }
+    }
+  }
+
+  return result
 }
 
 /**
@@ -329,61 +463,77 @@ export async function callNextTicket(params: {
 
   const meta = (unitRecord?.metadata as any) || {}
   const attendanceConfig = meta.attendanceConfig || {}
+  // A configuração da unidade salva no banco de dados é a autoridade primária
   const effectiveMode: 'PRIORITY' | 'INTERLEAVED' =
-    params.orderMode || attendanceConfig.defaultOrderMode || 'PRIORITY'
+    attendanceConfig.defaultOrderMode || params.orderMode || 'PRIORITY'
 
-  let nextItem: any = null
+  // Busca as senhas aguardando elegíveis ordenadas cronologicamente
+  const waitingCandidates = await db
+    .select({
+      id: tickets.id,
+      priorityWeight: priorities.weight,
+      createdAt: tickets.createdAt,
+    })
+    .from(tickets)
+    .innerJoin(services, eq(tickets.serviceId, services.id))
+    .innerJoin(priorities, eq(tickets.priorityId, priorities.id))
+    .where(
+      and(
+        eq(tickets.unitId, params.unitId),
+        eq(tickets.status, 'ISSUED'),
+        inArray(tickets.serviceId, allowedServiceIds),
+        or(
+          isNull(services.userId),
+          params.userId ? eq(services.userId, params.userId) : sql`FALSE`
+        )
+      )
+    )
+    .orderBy(asc(tickets.createdAt))
+    .limit(100)
+
+  if (waitingCandidates.length === 0) {
+    return { success: false, message: 'Nenhuma senha aguardando na fila.' }
+  }
+
+  let orderedCandidates = waitingCandidates
 
   if (effectiveMode === 'INTERLEAVED') {
-    // Intercala ciclo: 1 Urgência (peso 3), 1 Prioritário (peso 2), 1 Convencional (peso 1)
-    const lastWeight = meta.lastCalledPriorityWeight as number | undefined
-    
-    // Define a sequência de pesos desejados a partir do último chamado
-    let targetWeightsOrder = [3, 2, 1]
-    if (lastWeight === 3) targetWeightsOrder = [2, 1, 3]
-    else if (lastWeight === 2) targetWeightsOrder = [1, 3, 2]
-    else targetWeightsOrder = [3, 2, 1]
-
-    // Procura na ordem circular o primeiro peso que tem senhas aguardando
-    for (const targetWeight of targetWeightsOrder) {
-      const [item] = await db
-        .select({
-          ticket: tickets,
-          service: services,
-          priority: priorities,
-        })
+    // Identifica o peso da última senha chamada na unidade (via banco atômico de tickets)
+    let lastWeight = meta.lastCalledPriorityWeight as number | undefined
+    if (lastWeight === undefined) {
+      const [lastCalledTicket] = await db
+        .select({ priorityWeight: priorities.weight })
         .from(tickets)
-        .innerJoin(services, eq(tickets.serviceId, services.id))
         .innerJoin(priorities, eq(tickets.priorityId, priorities.id))
         .where(
           and(
             eq(tickets.unitId, params.unitId),
-            eq(tickets.status, 'ISSUED'),
-            eq(priorities.weight, targetWeight),
-            inArray(tickets.serviceId, allowedServiceIds),
-            or(
-              isNull(services.userId),
-              params.userId ? eq(services.userId, params.userId) : sql`FALSE`
-            )
+            inArray(tickets.status, ['CALLED', 'IN_PROGRESS', 'FINISHED'])
           )
         )
-        .orderBy(asc(tickets.createdAt))
+        .orderBy(desc(tickets.calledAt), desc(tickets.createdAt))
         .limit(1)
-        .for('update', { of: tickets, skipLocked: true })
 
-      if (item) {
-        nextItem = item
-        // Salva o peso chamado na unidade para o próximo ciclo
-        const updatedMeta = { ...meta, lastCalledPriorityWeight: targetWeight }
-        await db.update(units).set({ metadata: updatedMeta }).where(eq(units.id, params.unitId))
-        break
+      if (lastCalledTicket) {
+        lastWeight = lastCalledTicket.priorityWeight
       }
     }
+
+    orderedCandidates = interleaveWaitingTickets(waitingCandidates, lastWeight)
+  } else {
+    // Modo Prioridade Estrita: Urgência > Prioritário > Convencional, desempate por horário de emissão
+    orderedCandidates = [...waitingCandidates].sort(
+      (a, b) =>
+        b.priorityWeight - a.priorityWeight ||
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
   }
 
-  // Se não foi encontrado no modo intercalado ou o modo é estrito por prioridade
-  if (!nextItem) {
-    const query = db
+  let nextItem: any = null
+
+  // Tenta bloquear concorrentemente a primeira ficha válida da ordem selecionada
+  for (const candidate of orderedCandidates) {
+    const [item] = await db
       .select({
         ticket: tickets,
         service: services,
@@ -392,27 +542,17 @@ export async function callNextTicket(params: {
       .from(tickets)
       .innerJoin(services, eq(tickets.serviceId, services.id))
       .innerJoin(priorities, eq(tickets.priorityId, priorities.id))
-      .where(
-        and(
-          eq(tickets.unitId, params.unitId),
-          eq(tickets.status, 'ISSUED'),
-          inArray(tickets.serviceId, allowedServiceIds),
-          or(
-            isNull(services.userId),
-            params.userId ? eq(services.userId, params.userId) : sql`FALSE`
-          )
-        )
-      )
-      .orderBy(desc(priorities.weight), asc(tickets.createdAt))
+      .where(and(eq(tickets.id, candidate.id), eq(tickets.status, 'ISSUED')))
       .limit(1)
       .for('update', { of: tickets, skipLocked: true })
 
-    const [item] = await query
-    nextItem = item
-
-    if (nextItem && effectiveMode === 'INTERLEAVED') {
-      const updatedMeta = { ...meta, lastCalledPriorityWeight: nextItem.priority.weight }
-      await db.update(units).set({ metadata: updatedMeta }).where(eq(units.id, params.unitId))
+    if (item) {
+      nextItem = item
+      if (effectiveMode === 'INTERLEAVED') {
+        const updatedMeta = { ...meta, lastCalledPriorityWeight: item.priority.weight }
+        await db.update(units).set({ metadata: updatedMeta }).where(eq(units.id, params.unitId))
+      }
+      break
     }
   }
 
@@ -1251,10 +1391,30 @@ export async function getAttendantEligibleServices(params: {
       return Boolean(params.userId && s.userId === params.userId)
     }
 
-    // 2. Se o serviço NÃO tem atendente exclusivo (geral da unidade ou da sala)
-    const isGlobal = !s.roomId
-    const matchesRoom = Boolean(roomId && s.roomId === roomId)
-    return isGlobal || matchesRoom
+    // 2. Se o atendente está alocado em uma SALA ESPECÍFICA:
+    if (roomId) {
+      // É elegível para os serviços atribuídos diretamente a esta sala
+      if (s.roomId === roomId) return true
+
+      // Se o serviço pertence a outra sala, NÃO é elegível
+      if (s.roomId && s.roomId !== roomId) return false
+
+      // Se o serviço for global (sem sala definida):
+      // Verifica se a sala do atendente possui serviços específicos vinculados a ela.
+      // Caso possua, ela é uma sala especializada (ex: Consultório, Odonto, Triagem)
+      // e não deve ser misturada com a fila de atendimento geral da unidade.
+      const roomHasSpecificServices = allServices.some((other) => other.roomId === roomId)
+      if (roomHasSpecificServices) {
+        return false
+      }
+
+      // Se a sala não possui nenhum serviço próprio vinculado, atende aos serviços gerais
+      return !s.roomId
+    }
+
+    // 3. Se o atendente está em um posto GERAL (sem sala vinculada):
+    // Atende apenas aos serviços gerais da unidade (sem sala e sem atendente exclusivo)
+    return !s.roomId && !s.userId
   })
 
   return {
@@ -1272,7 +1432,7 @@ export async function getAttendantQueueState(unitId: string, locationId?: string
   const eligibleData = await getAttendantEligibleServices({ unitId, locationId, userId })
   const eligibleServiceIds = eligibleData.eligibleServices.map((s) => s.id)
 
-  const [waitingList, currentActive, pendingList, [unitRecord]] = await Promise.all([
+  const [waitingListRaw, waitingCountRecord, currentActive, pendingList, [unitRecord]] = await Promise.all([
     eligibleServiceIds.length > 0
       ? db
           .select({
@@ -1302,9 +1462,28 @@ export async function getAttendantQueueState(unitId: string, locationId?: string
               )
             )
           )
-          .orderBy(desc(priorities.weight), asc(tickets.createdAt))
-          .limit(20)
+          .orderBy(asc(tickets.createdAt))
+          .limit(50)
       : Promise.resolve([]),
+
+    // Contagem agregada total de pessoas na fila do posto/sala (sem limitação de paginação)
+    eligibleServiceIds.length > 0
+      ? db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(tickets)
+          .innerJoin(services, eq(tickets.serviceId, services.id))
+          .where(
+            and(
+              eq(tickets.unitId, unitId),
+              eq(tickets.status, 'ISSUED'),
+              inArray(tickets.serviceId, eligibleServiceIds),
+              or(
+                isNull(services.userId),
+                userId ? eq(services.userId, userId) : sql`FALSE`
+              )
+            )
+          )
+      : Promise.resolve([{ count: 0 }]),
 
     locationId
       ? db
@@ -1373,8 +1552,19 @@ export async function getAttendantQueueState(unitId: string, locationId?: string
     lastManualResetAt: cfg.lastManualResetAt || null,
   }
 
+  let waitingList = waitingListRaw
+  if (attendanceConfig.defaultOrderMode === 'INTERLEAVED') {
+    const lastWeight = meta.lastCalledPriorityWeight as number | undefined
+    waitingList = interleaveWaitingTickets(waitingListRaw, lastWeight).slice(0, 20)
+  } else {
+    waitingList = [...waitingListRaw]
+      .sort((a, b) => b.priorityWeight - a.priorityWeight || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .slice(0, 20)
+  }
+
   return {
     waiting: waitingList,
+    totalWaiting: waitingCountRecord[0]?.count ?? waitingList.length,
     currentTicket: currentActive[0] || null,
     pendingTickets: pendingList,
     eligibleServices: eligibleData.eligibleServices,

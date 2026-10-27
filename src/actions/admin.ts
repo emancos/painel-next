@@ -469,6 +469,22 @@ export async function saveUnitAttendanceConfig(unitId: string, attendanceConfig:
     .where(eq(units.id, unitId))
     .returning()
 
+  await publishPanelEvent(unitId, {
+    type: 'CONFIG_CHANGED',
+    timestamp: new Date().toISOString(),
+    payload: {
+      action: 'UPDATE_ATTENDANCE_CONFIG',
+      attendanceConfig: {
+        defaultOrderMode: attendanceConfig.defaultOrderMode || 'PRIORITY',
+        allowManualQueueSelection: attendanceConfig.allowManualQueueSelection ?? true,
+        autoResetEnabled: attendanceConfig.autoResetEnabled ?? true,
+        autoResetTime: attendanceConfig.autoResetTime || '00:00',
+        autoResetClearQueue: attendanceConfig.autoResetClearQueue ?? false,
+        lastManualResetAt: attendanceConfig.lastManualResetAt || null,
+      },
+    },
+  })
+
   return updated
 }
 

@@ -102,13 +102,22 @@ interface EligibleServiceItem {
   userId?: string | null
 }
 
+interface CurrentUser {
+  id: string
+  name: string
+  email: string
+  role: string
+  avatarUrl?: string | null
+}
+
 export default function AtendimentoPage() {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string; avatarUrl?: string | null } | null>(null)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [unit, setUnit] = useState<{ id: string; name: string } | null>(null)
   const [locations, setLocations] = useState<LocationItem[]>([])
   const [selectedLocationId, setSelectedLocationId] = useState<string>('')
   const [waitingQueue, setWaitingQueue] = useState<WaitingTicketItem[]>([])
+  const [totalWaiting, setTotalWaiting] = useState<number>(0)
   const [currentTicket, setCurrentTicket] = useState<CurrentTicketData | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -194,6 +203,9 @@ export default function AtendimentoPage() {
       }
       setLocations((data.locations || []) as unknown as LocationItem[])
       setPrioritiesList(data.priorities || [])
+      if (data.attendanceConfig) {
+        setAttendanceConfig(data.attendanceConfig)
+      }
     })
   }, [])
 
@@ -222,6 +234,29 @@ export default function AtendimentoPage() {
   const processedTicketNotificationsRef = useRef<Set<string>>(new Set())
   const isInitialQueueLoadedRef = useRef(false)
 
+  // Referências sincronizadas para evitar Stale Closure no callback assíncrono do SSE
+  const eligibleServicesRef = useRef<EligibleServiceItem[]>([])
+  const currentUserRef = useRef<CurrentUser | null>(null)
+  const locationsRef = useRef<LocationItem[]>([])
+  const selectedLocationIdRef = useRef<string>('')
+  const handleTicketNotificationRef = useRef<(ticketData: IssuedTicketNotificationData) => void>(() => {})
+
+  useEffect(() => {
+    eligibleServicesRef.current = eligibleServices
+  }, [eligibleServices])
+
+  useEffect(() => {
+    currentUserRef.current = currentUser
+  }, [currentUser])
+
+  useEffect(() => {
+    locationsRef.current = locations
+  }, [locations])
+
+  useEffect(() => {
+    selectedLocationIdRef.current = selectedLocationId
+  }, [selectedLocationId])
+
   const handleTicketNotification = (ticketData: IssuedTicketNotificationData) => {
     if (!ticketData?.ticketId) return
     if (processedTicketNotificationsRef.current.has(ticketData.ticketId)) return
@@ -229,19 +264,33 @@ export default function AtendimentoPage() {
     knownTicketsRef.current.add(ticketData.ticketId)
 
     const settings = attendantNotificationManager.getSettings()
+    const currentU = currentUserRef.current
+    const activeEligible = eligibleServicesRef.current
+    const currentLocId = selectedLocationIdRef.current
+    const currentLoc = locationsRef.current.find((l) => l.id === currentLocId)
 
-    // Se a senha pertencer a um serviço restrito a outro atendente específico, ignora a notificação
-    if (ticketData.assignedUserId && currentUser && ticketData.assignedUserId !== currentUser.id) {
+    // 1. Se a senha pertence a um atendente exclusivo e não for o usuário logado, descarta
+    if (ticketData.assignedUserId && currentU && ticketData.assignedUserId !== currentU.id) {
       return
     }
 
-    // Filtro: Apenas senhas de serviços elegíveis ao guichê do atendente
-    if (settings.notifyOnlyEligibleServices && eligibleServices.length > 0) {
-      const isEligible = eligibleServices.some((s) => s.id === ticketData.serviceId)
-      if (!isEligible) return
+    // 2. Filtro estrito de isolamento por posto, sala e serviços elegíveis (ativo por padrão)
+    if (settings.notifyOnlyEligibleServices) {
+      // Se há serviços elegíveis mapeados para este posto, valida se a nova senha pertence a eles
+      if (activeEligible.length > 0) {
+        const isEligible = activeEligible.some((s) => s.id === ticketData.serviceId)
+        if (!isEligible) {
+          return // Senha de outro serviço ou de outra sala -> não notifica este atendente!
+        }
+      }
+
+      // Se a senha foi emitida para uma sala específica e o posto do atendente estiver em outra sala, descarta
+      if (ticketData.roomId && currentLoc?.roomId && ticketData.roomId !== currentLoc.roomId) {
+        return
+      }
     }
 
-    // 1. Toca o alerta sonoro sintetizado Web Audio (cross-platform Windows & Linux)
+    // 3. Toca o alerta sonoro sintetizado Web Audio (cross-platform Windows & Linux)
     if (settings.soundEnabled) {
       const isSpecial =
         (ticketData.priorityName || '').toLowerCase().includes('especial') ||
@@ -249,18 +298,21 @@ export default function AtendimentoPage() {
       attendantNotificationManager.playTicketSound(isSpecial ? 'urgent' : settings.soundType)
     }
 
-    // 2. Dispara notificação nativa da área de trabalho (Windows Action Center / Linux desktop)
+    // 4. Dispara notificação nativa da área de trabalho (Windows Action Center / Linux desktop)
     if (settings.visualEnabled) {
       attendantNotificationManager.showDesktopNotification(ticketData)
       setIncomingToastTicket(ticketData)
     }
   }
 
+  handleTicketNotificationRef.current = handleTicketNotification
+
   // 4. Atualiza fila de atendimento
   const refreshQueue = (unitId: string, locId: string, uId?: string) => {
     getAttendantQueueState(unitId, locId, uId).then((state) => {
       const waitingList = (state.waiting || []) as unknown as WaitingTicketItem[]
       setWaitingQueue(waitingList)
+      setTotalWaiting(typeof state.totalWaiting === 'number' ? state.totalWaiting : waitingList.length)
 
       // Detecta senhas novas emitidas durante o polling como fallback
       if (!isInitialQueueLoadedRef.current) {
@@ -269,7 +321,7 @@ export default function AtendimentoPage() {
       } else {
         waitingList.forEach((t) => {
           if (!knownTicketsRef.current.has(t.id)) {
-            handleTicketNotification({
+            handleTicketNotificationRef.current({
               ticketId: t.id,
               formattedTicket: t.formattedTicket,
               ticketPrefix: t.ticketPrefix,
@@ -292,6 +344,9 @@ export default function AtendimentoPage() {
         setCurrentTicket(null)
       }
       setPendingTickets(state.pendingTickets || [])
+      if (state.eligibleServices) {
+        eligibleServicesRef.current = state.eligibleServices
+      }
       setEligibleServices(state.eligibleServices || [])
       setAllServices(state.allServices || [])
       if (state.attendanceConfig) {
@@ -342,7 +397,12 @@ export default function AtendimentoPage() {
               return prev
             })
           } else if (parsed.type === 'TICKET_ISSUED') {
-            handleTicketNotification(parsed.payload)
+            handleTicketNotificationRef.current(parsed.payload)
+            refreshQueue(unit.id, selectedLocationId, currentUser.id)
+          } else if (parsed.type === 'CONFIG_CHANGED') {
+            if (parsed.payload?.action === 'UPDATE_ATTENDANCE_CONFIG' && parsed.payload?.attendanceConfig) {
+              setAttendanceConfig(parsed.payload.attendanceConfig)
+            }
             refreshQueue(unit.id, selectedLocationId, currentUser.id)
           } else if (parsed.type === 'TICKET_CALLED' || parsed.type === 'TICKET_FINISHED') {
             refreshQueue(unit.id, selectedLocationId, currentUser.id)
@@ -1021,7 +1081,7 @@ export default function AtendimentoPage() {
                   </span>
                 )}
                 <span className="text-xs px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 font-extrabold border border-cyan-500/30">
-                  {waitingQueue.length} aguardando
+                  {totalWaiting} aguardando
                 </span>
               </div>
             </div>
