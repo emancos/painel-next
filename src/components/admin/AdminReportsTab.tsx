@@ -23,7 +23,11 @@ import {
   Download,
   FileText,
   UserCheck,
-  Tag
+  Tag,
+  Hash,
+  User,
+  Hourglass,
+  MapPin
 } from 'lucide-react'
 import {
   getAdminTicketsReport,
@@ -223,39 +227,39 @@ export function AdminReportsTab({
     switch (status) {
       case 'FINISHED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
-            <CheckCircle2 className="w-3 h-3" /> Concluído
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Concluído
           </span>
         )
       case 'IN_PROGRESS':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 animate-pulse">
-            <Clock className="w-3 h-3" /> Em Atendimento
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30 animate-pulse shadow-2xs">
+            <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Em Atendimento
           </span>
         )
       case 'CALLED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-500/15 text-sky-800 dark:text-sky-300 border border-sky-500/30">
-            <AlertTriangle className="w-3 h-3" /> Chamada
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-100 text-sky-900 border border-sky-300 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30 shadow-2xs">
+            <AlertTriangle className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" /> Chamada
           </span>
         )
       case 'NO_SHOW':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-800 dark:text-rose-300 border border-rose-500/30">
-            <XCircle className="w-3 h-3" /> Não Compareceu
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30 shadow-2xs">
+            <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" /> Não Compareceu
           </span>
         )
       case 'CANCELLED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-500/15 text-slate-700 dark:text-slate-400 border border-slate-500/30">
-            <XCircle className="w-3 h-3" /> Cancelada
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-200 text-slate-800 border border-slate-300 dark:bg-slate-500/15 dark:text-slate-400 dark:border-slate-500/30 shadow-2xs">
+            <XCircle className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" /> Cancelada
           </span>
         )
       case 'ISSUED':
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/30">
-            <Clock className="w-3 h-3" /> Na Fila
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-cyan-100 text-cyan-900 border border-cyan-300 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30 shadow-2xs">
+            <Clock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" /> Na Fila
           </span>
         )
     }
@@ -581,12 +585,15 @@ export function AdminReportsTab({
       </div>
 
       {/* 4. Tabela de Senhas Emitidas (Visualização Web & Mobile) */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-4">
+      <div className="p-5 sm:p-6 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-white flex items-center gap-2">
+          <h3 className="text-sm font-black text-white flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold">
+              <FileSpreadsheet className="w-4 h-4" />
+            </div>
             <span>Senhas Encontradas</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 font-mono">
-              {ticketsList.length}
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 font-mono font-bold border border-cyan-300 dark:border-cyan-500/30">
+              {ticketsList.length} registros
             </span>
           </h3>
 
@@ -615,22 +622,67 @@ export function AdminReportsTab({
         </div>
 
         {/* Visualização Desktop (Tabela Completa com Scroll Seguro) */}
-        <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40">
+        <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 shadow-xs">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-            <thead className="bg-slate-100 dark:bg-slate-950/80 text-[11px] uppercase font-bold text-slate-700 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+            <thead className="bg-gradient-to-r from-slate-100 via-sky-50/70 to-indigo-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-[11px] uppercase font-bold text-slate-700 dark:text-slate-400 border-b-2 border-slate-200 dark:border-slate-800 tracking-wider">
               <tr>
-                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Senha</th>
-                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Cidadão / Doc</th>
-                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Serviço</th>
-                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Sala / Posto</th>
-                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Atendente</th>
-                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Emissão</th>
-                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Espera</th>
-                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Atendimento</th>
-                <th className="py-3 px-3.5 text-right text-slate-700 dark:text-slate-400">Status</th>
+                <th className="py-3.5 px-3.5">
+                  <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-300">
+                    <Hash className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                    <span>Senha</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-3.5">
+                  <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-300">
+                    <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span>Cidadão / Doc</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-3.5">
+                  <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-300">
+                    <Briefcase className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Serviço</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-3.5">
+                  <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-300">
+                    <DoorOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Sala / Posto</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-3.5">
+                  <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-300">
+                    <UserCheck className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                    <span>Atendente</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-3.5">
+                  <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-300">
+                    <Clock className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+                    <span>Emissão</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-3.5">
+                  <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-300">
+                    <Hourglass className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                    <span>Espera</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-3.5">
+                  <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-300">
+                    <Timer className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Atendimento</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-3.5 text-right">
+                  <div className="flex items-center justify-end gap-1.5 text-slate-800 dark:text-slate-300">
+                    <Shield className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                    <span>Status</span>
+                  </div>
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-medium">
+            <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60 font-medium">
               {paginatedTickets.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-slate-500">
@@ -639,19 +691,22 @@ export function AdminReportsTab({
                 </tr>
               ) : (
                 paginatedTickets.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  <tr
+                    key={t.id}
+                    className="odd:bg-white even:bg-slate-50/70 hover:bg-sky-50/80 dark:odd:bg-slate-950/20 dark:even:bg-slate-900/30 dark:hover:bg-slate-800/40 transition-colors"
+                  >
                     {/* Senha e Prioridade */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-black text-sm text-slate-900 dark:text-white">
+                        <span className="font-mono font-black text-sm px-2.5 py-1 rounded-lg bg-slate-900 text-white dark:bg-slate-800 dark:text-cyan-300 border border-slate-700/60 shadow-2xs">
                           {t.formattedTicket}
                         </span>
                         <span
-                          className="text-[9px] px-1.5 py-0.5 rounded font-bold"
+                          className="text-[9px] px-2 py-0.5 rounded-full font-bold shadow-2xs"
                           style={{
-                            backgroundColor: `${t.priorityColor}20`,
+                            backgroundColor: `${t.priorityColor}25`,
                             color: t.priorityColor,
-                            border: `1px solid ${t.priorityColor}40`,
+                            border: `1px solid ${t.priorityColor}50`,
                           }}
                         >
                           {t.priorityName}
@@ -661,55 +716,75 @@ export function AdminReportsTab({
 
                     {/* Cidadão / Doc */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className="text-slate-900 dark:text-white block font-bold truncate max-w-[150px]">
-                        {t.customerName || 'Não identificado'}
-                      </span>
-                      {t.customerDoc && (
-                        <span className="text-[10px] text-slate-500 font-mono block">
-                          Doc: {t.customerDoc}
+                      <div className="space-y-0.5">
+                        <span className="text-slate-900 dark:text-white block font-bold text-xs truncate max-w-[150px]">
+                          {t.customerName || 'Não identificado'}
                         </span>
-                      )}
+                        {t.customerDoc && (
+                          <span className="inline-block text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                            Doc: {t.customerDoc}
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Serviço */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className="text-slate-800 dark:text-slate-200 block truncate max-w-[140px]">
-                        {t.serviceName}
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 truncate max-w-[150px] shadow-2xs">
+                        <Briefcase className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span className="truncate">{t.serviceName}</span>
                       </span>
                     </td>
 
                     {/* Sala / Local */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className="text-slate-700 dark:text-slate-300 block truncate max-w-[120px]">
-                        {t.roomName || 'Geral'}
-                      </span>
-                      {t.locationName && (
-                        <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono block">
-                          {t.locationName} {t.locationNumber}
+                      <div className="flex flex-col gap-0.5">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-900 dark:text-indigo-300">
+                          <DoorOpen className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <span className="truncate max-w-[120px]">{t.roomName || 'Geral'}</span>
                         </span>
-                      )}
+                        {t.locationName && (
+                          <span className="text-[10px] text-cyan-700 dark:text-cyan-400 font-mono font-medium pl-4">
+                            {t.locationName} {t.locationNumber}
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Atendente */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className="text-slate-700 dark:text-slate-300 block truncate max-w-[120px]">
-                        {t.attendantName || '--'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 text-white flex items-center justify-center text-[10px] font-black shadow-xs shrink-0">
+                          {t.attendantName ? t.attendantName.slice(0, 2).toUpperCase() : '--'}
+                        </div>
+                        <span className="text-slate-800 dark:text-slate-200 text-xs font-semibold truncate max-w-[120px]">
+                          {t.attendantName || 'Não atribuído'}
+                        </span>
+                      </div>
                     </td>
 
                     {/* Horário de Emissão */}
-                    <td className="py-3 px-3.5 whitespace-nowrap text-slate-600 dark:text-slate-400 font-mono text-[11px]">
-                      {formatTimeOnly(t.createdAt)}
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 font-mono text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700/60">
+                        <Clock className="w-3 h-3 text-slate-400" />
+                        {formatTimeOnly(t.createdAt)}
+                      </span>
                     </td>
 
                     {/* Tempo de Espera */}
-                    <td className="py-3 px-3.5 whitespace-nowrap font-mono text-[11px] text-sky-600 dark:text-sky-400">
-                      {formatDuration(t.waitTimeSeconds)}
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 px-2.5 py-0.5 rounded-md border border-sky-200 dark:border-sky-800/50 shadow-2xs">
+                        <Hourglass className="w-3 h-3 text-sky-500" />
+                        {formatDuration(t.waitTimeSeconds)}
+                      </span>
                     </td>
 
                     {/* Tempo de Atendimento */}
-                    <td className="py-3 px-3.5 whitespace-nowrap font-mono text-[11px] text-indigo-600 dark:text-indigo-400">
-                      {formatDuration(t.serviceTimeSeconds)}
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-indigo-800 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800/50 shadow-2xs">
+                        <Timer className="w-3 h-3 text-indigo-500" />
+                        {formatDuration(t.serviceTimeSeconds)}
+                      </span>
                     </td>
 
                     {/* Status */}
@@ -733,20 +808,20 @@ export function AdminReportsTab({
             paginatedTickets.map((t) => (
               <div
                 key={t.id}
-                className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5 text-xs"
+                className="p-4 rounded-2xl bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-3 text-xs shadow-xs"
               >
                 {/* Linha 1: Senha, Prioridade e Status */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-black text-base text-white">
+                    <span className="font-mono font-black text-sm px-2.5 py-1 rounded-lg bg-slate-900 text-white dark:bg-slate-800 dark:text-cyan-300 border border-slate-700/60 shadow-2xs">
                       {t.formattedTicket}
                     </span>
                     <span
-                      className="text-[9px] px-1.5 py-0.5 rounded font-bold"
+                      className="text-[9px] px-2 py-0.5 rounded-full font-bold shadow-2xs"
                       style={{
-                        backgroundColor: `${t.priorityColor}20`,
+                        backgroundColor: `${t.priorityColor}25`,
                         color: t.priorityColor,
-                        border: `1px solid ${t.priorityColor}40`,
+                        border: `1px solid ${t.priorityColor}50`,
                       }}
                     >
                       {t.priorityName}
@@ -756,34 +831,42 @@ export function AdminReportsTab({
                 </div>
 
                 {/* Linha 2: Cidadão e Serviço */}
-                <div className="text-slate-300">
-                  <div className="font-bold text-white truncate">
+                <div className="space-y-1">
+                  <div className="font-bold text-slate-900 dark:text-white truncate text-sm">
                     {t.customerName || 'Cidadão não identificado'}
                   </div>
-                  <div className="text-[11px] text-cyan-400 truncate mt-0.5">
-                    {t.serviceName}
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+                    <Briefcase className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    <span>{t.serviceName}</span>
                   </div>
                 </div>
 
                 {/* Linha 3: Sala, Atendente e Horários */}
-                <div className="pt-2 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 grid grid-cols-2 gap-2 text-[11px] text-slate-600 dark:text-slate-400">
                   <div>
                     <span className="text-[10px] text-slate-500 block">Sala / Posto:</span>
-                    <span className="text-slate-200 font-medium">
+                    <span className="text-indigo-900 dark:text-indigo-300 font-semibold flex items-center gap-1">
+                      <DoorOpen className="w-3 h-3 text-indigo-500" />
                       {t.roomName || 'Geral'}{t.locationNumber ? ` (${t.locationName} ${t.locationNumber})` : ''}
                     </span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500 block">Atendente:</span>
-                    <span className="text-slate-200 font-medium">{t.attendantName || '--'}</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-semibold">
+                      {t.attendantName || '--'}
+                    </span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500 block">Espera:</span>
-                    <span className="text-sky-400 font-mono">{formatDuration(t.waitTimeSeconds)}</span>
+                    <span className="text-sky-700 dark:text-sky-400 font-mono font-bold">
+                      {formatDuration(t.waitTimeSeconds)}
+                    </span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500 block">Atendimento:</span>
-                    <span className="text-indigo-400 font-mono">{formatDuration(t.serviceTimeSeconds)}</span>
+                    <span className="text-indigo-700 dark:text-indigo-400 font-mono font-bold">
+                      {formatDuration(t.serviceTimeSeconds)}
+                    </span>
                   </div>
                 </div>
               </div>

@@ -80,27 +80,38 @@ body {
   color: #0f172a !important;
 }
 
-/* Headers e células de cabeçalho de tabelas no tema claro com contraste perfeito */
-[data-admin-theme='light'] .admin-page-container thead,
-[data-admin-theme='light'] .admin-page-container thead[class*='bg-slate-950'] {
-  background-color: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
+/* Headers e células de cabeçalho de tabelas no tema claro com riqueza cromática e profundidade */
+[data-admin-theme='light'] .admin-page-container thead {
+  background: linear-gradient(90deg, #f1f5f9 0%, #e0f2fe 35%, #ede9fe 70%, #f1f5f9 100%) !important;
+  border-bottom: 2px solid #cbd5e1 !important;
 }
 
 [data-admin-theme='light'] .admin-page-container thead th,
 [data-admin-theme='light'] .admin-page-container th {
-  color: #1e293b !important;
-  font-weight: 700 !important;
-  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  background-color: transparent !important;
   border-color: #cbd5e1 !important;
 }
 
-[data-admin-theme='light'] .admin-page-container tr:hover,
-[data-admin-theme='light'] .admin-page-container tr[class*='hover:bg-slate-800']:hover {
+[data-admin-theme='light'] .admin-page-container thead th * {
+  font-weight: 700 !important;
+}
+
+/* Linhas zebradas e hover dinâmico no tema claro */
+[data-admin-theme='light'] .admin-page-container tbody tr:nth-child(even) {
   background-color: #f8fafc !important;
 }
 
-[data-admin-theme='light'] .admin-page-container tbody[class*='divide-slate-800'] > tr {
+[data-admin-theme='light'] .admin-page-container tbody tr:nth-child(odd) {
+  background-color: #ffffff !important;
+}
+
+[data-admin-theme='light'] .admin-page-container tbody tr:hover {
+  background-color: #f0f9ff !important; /* sky-50 suave e vibrante ao passar o mouse */
+}
+
+[data-admin-theme='light'] .admin-page-container tbody[class*='divide-slate-'] > tr {
   border-color: #e2e8f0 !important;
 }
 
