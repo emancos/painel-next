@@ -27,6 +27,7 @@ import {
   Edit2
 } from 'lucide-react'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
+import { NavbarShortcuts } from '@/components/NavbarShortcuts'
 import {
   getUserProfile,
   updateUserName,
@@ -289,15 +290,15 @@ export default function UserProfilePage() {
   const roleInfo = getRoleBadge(profile.role)
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8 admin-page-container transition-colors duration-200 relative overflow-hidden">
+    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-4 sm:p-6 md:p-8 admin-page-container transition-colors duration-200 relative overflow-hidden">
       {/* Luzes de Fundo Ambientais */}
       <div className="mesh-orb-cyan -top-24 -left-24 w-96 h-96 opacity-40 dark:opacity-30 pointer-events-none" />
       <div className="mesh-orb-indigo top-1/2 -right-24 w-[450px] h-[450px] opacity-35 dark:opacity-20 pointer-events-none" />
       <div className="mesh-orb-emerald -bottom-24 left-1/3 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none" />
 
       {/* Header Superior com Voltar, Tema e Logout */}
-      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4 z-10">
-        <div className="flex items-center space-x-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between pb-5 border-b border-slate-200 dark:border-slate-800 gap-3.5 z-10">
+        <div className="flex items-center space-x-3 sm:space-x-4">
           <Link
             href={getBackRoute()}
             className="h-11 w-11 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all flex items-center justify-center shrink-0 shadow-xs hover:scale-105 active:scale-95"
@@ -305,34 +306,39 @@ export default function UserProfilePage() {
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div>
-            <div className="flex items-center space-x-2.5">
-              <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center space-x-2">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 truncate">
                 Perfil de Usuário
               </h1>
               <span
-                className={`text-xs px-2.5 py-0.5 rounded-full border font-bold flex items-center gap-1.5 shadow-xs ${roleInfo.badgeClass}`}
+                className={`text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full border font-bold flex items-center gap-1.5 shadow-xs shrink-0 ${roleInfo.badgeClass}`}
               >
                 {roleInfo.icon}
                 {roleInfo.label}
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
               Gerencie suas informações, foto de exibição e credenciais de segurança
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3 shrink-0">
-          <AdminThemeToggle />
-          <button
-            onClick={handleLogout}
-            className="h-11 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 text-xs font-bold transition-all shadow-xs flex items-center space-x-2 shrink-0 active:scale-95 cursor-pointer"
-            title="Encerrar Sessão"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sair</span>
-          </button>
+        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 flex-wrap gap-y-2 w-full md:w-auto justify-between md:justify-end">
+          {/* Atalhos de Navegação por Perfil */}
+          <NavbarShortcuts user={profile} />
+
+          <div className="flex items-center space-x-2">
+            <AdminThemeToggle />
+            <button
+              onClick={handleLogout}
+              className="h-10 sm:h-11 px-3 sm:px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 text-xs font-bold transition-all shadow-xs flex items-center space-x-2 shrink-0 active:scale-95 cursor-pointer"
+              title="Encerrar Sessão"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sair</span>
+            </button>
+          </div>
         </div>
       </header>
 

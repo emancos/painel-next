@@ -20,6 +20,7 @@ import { getUnitData } from '@/actions/tickets'
 import { getSessionAction, logoutAction } from '@/actions/auth'
 import { AdminThemeToggle } from '@/components/theme/AdminThemeToggle'
 import { UserNavbarBadge } from '@/components/UserNavbarBadge'
+import { NavbarShortcuts } from '@/components/NavbarShortcuts'
 import { setDocumentFavicon } from '@/lib/favicon'
 
 export default function HomePage() {
@@ -56,86 +57,81 @@ export default function HomePage() {
       <div className="mesh-orb-emerald -bottom-24 left-1/3 w-[500px] h-[500px] opacity-40 dark:opacity-20" />
 
       {/* Navbar Superior com Logo, Nome e Subtítulo da Unidade */}
-      <header data-navbar="root" className="border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-xl px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 z-20">
-        <div className="flex items-center space-x-3.5">
+      <header data-navbar="root" className="border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-xl px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3.5 z-20">
+        <div className="flex items-center space-x-3">
           {unitLogoUrl ? (
             <img
               src={unitLogoUrl}
               alt="Brasão da Unidade"
-              className="w-12 h-12 object-contain rounded-2xl bg-white/10 dark:bg-white/10 p-1.5 border border-slate-700/80 shadow-md transition-transform hover:scale-105"
+              className="w-10 sm:w-12 h-10 sm:h-12 object-contain rounded-2xl bg-white/10 dark:bg-white/10 p-1.5 border border-slate-700/80 shadow-md transition-transform hover:scale-105 shrink-0"
             />
           ) : (
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 via-sky-500 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-cyan-500/30">
+            <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 via-sky-500 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-lg sm:text-xl shadow-lg shadow-cyan-500/30 shrink-0">
               {unitName ? unitName.charAt(0) : 'U'}
             </div>
           )}
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center space-x-2">
-              <h1 className="text-lg md:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+              <h1 className="text-base sm:text-lg md:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2 truncate">
                 {unitName}
               </h1>
-              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold uppercase tracking-wider shadow-xs">
-                Unidade Ativa
+              <span className="text-[9px] sm:text-[10px] px-2 sm:px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold uppercase tracking-wider shadow-xs shrink-0">
+                Ativa
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
               {unitSubtitle || 'Painel de Chamados Inteligente • Atendimento e Triagem'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3 shrink-0">
-          <AdminThemeToggle />
-          {currentUser ? (
-            <UserNavbarBadge
-              user={currentUser}
-              onLogout={async () => {
-                await logoutAction()
-                setCurrentUser(null)
-              }}
-            />
-          ) : (
-            <Link
-              href="/login"
-              className="h-11 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white border border-slate-300 dark:border-slate-700/80 text-xs font-bold transition-all flex items-center space-x-2 shrink-0 shadow-xs active:scale-95"
-            >
-              <LogInIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-              <span>Login Operador</span>
-            </Link>
-          )}
+        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 flex-wrap gap-y-2 w-full md:w-auto justify-between md:justify-end">
+          <NavbarShortcuts user={currentUser} unitId={unitId} />
 
-          <Link
-            href={`/painel/${unitId}`}
-            target="_blank"
-            className="h-11 px-5 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs transition-all shadow-[0_4px_20px_rgba(6,182,212,0.35)] hover:shadow-[0_6px_25px_rgba(6,182,212,0.45)] flex items-center space-x-2 shrink-0 active:scale-95"
-          >
-            <Tv className="w-4 h-4" />
-            <span>Painel TV Fullscreen</span>
-          </Link>
+          <div className="flex items-center space-x-2">
+            <AdminThemeToggle />
+            {currentUser ? (
+              <UserNavbarBadge
+                user={currentUser}
+                onLogout={async () => {
+                  await logoutAction()
+                  setCurrentUser(null)
+                }}
+              />
+            ) : (
+              <Link
+                href="/login"
+                className="h-10 sm:h-11 px-3.5 sm:px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white border border-slate-300 dark:border-slate-700/80 text-xs font-bold transition-all flex items-center space-x-2 shrink-0 shadow-xs active:scale-95"
+              >
+                <LogInIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                <span>Login</span>
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Conteúdo Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8 z-10">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 z-10">
         {/* Banner de Destaque com "Boom Visual" */}
-        <div className="hero-banner-boom rounded-3xl p-8 md:p-10 relative overflow-hidden">
+        <div className="hero-banner-boom rounded-3xl p-5 sm:p-8 md:p-10 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-400/10 dark:bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-emerald-400/10 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="max-w-3xl space-y-5 relative z-10">
-            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold shadow-xs">
+          <div className="max-w-3xl space-y-4 sm:space-y-5 relative z-10">
+            <div className="inline-flex items-center space-x-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-[11px] sm:text-xs font-bold shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
               <span>Painel de Atendimento Unificado em Tempo Real</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.15]">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.18]">
               Sistema Operacional de{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 via-sky-500 to-emerald-500 dark:from-cyan-400 dark:via-sky-300 dark:to-emerald-400">
                 Atendimento & Chamadas
               </span>
             </h2>
 
-            <p className="text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed max-w-2xl font-normal">
+            <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed max-w-2xl font-normal">
               Gestão ágil de filas, autoatendimento no totem de triagem com impressão térmica, postos de trabalho dedicados e transmissão audiovisual em alta definição na TV da sala de espera.
             </p>
 
