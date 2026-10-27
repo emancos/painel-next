@@ -2013,9 +2013,19 @@ export default function AdminPage() {
                 return (
                   <div key={u.id} className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-800 text-cyan-400 flex items-center justify-center font-bold shrink-0 border border-slate-700">
+                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-800 text-cyan-400 flex items-center justify-center font-bold shrink-0 border border-slate-700 relative">
                         {u.avatarUrl ? (
-                          <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" />
+                          <>
+                            <span className="absolute">{u.name.charAt(0).toUpperCase()}</span>
+                            <img
+                              src={u.avatarUrl}
+                              alt={u.name}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                              className="w-full h-full object-cover relative z-10"
+                            />
+                          </>
                         ) : (
                           u.name.charAt(0).toUpperCase()
                         )}

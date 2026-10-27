@@ -51,7 +51,12 @@ export default function UserProfilePage() {
 
   // Upload de Avatar
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [avatarLoadError, setAvatarLoadError] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setAvatarLoadError(false)
+  }, [profile?.avatarUrl])
 
   // Formulário de Alteração de Senha
   const [currentPassword, setCurrentPassword] = useState('')
@@ -369,10 +374,11 @@ export default function UserProfilePage() {
                 {/* Visualizador de Foto com Overlay de Câmera */}
                 <div className="relative group">
                   <div className="w-32 h-32 md:w-36 md:h-36 rounded-full p-1 border-2 border-cyan-500/40 shadow-xl overflow-hidden bg-white/5 dark:bg-slate-950 flex items-center justify-center">
-                    {profile.avatarUrl ? (
+                    {profile.avatarUrl && !avatarLoadError ? (
                       <img
                         src={profile.avatarUrl}
                         alt={`Foto de ${profile.name}`}
+                        onError={() => setAvatarLoadError(true)}
                         className="w-full h-full object-cover rounded-full transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
