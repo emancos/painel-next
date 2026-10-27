@@ -763,17 +763,17 @@ export default function TriagemTotemPage() {
       {/* Modal / Feedback de Senha Emitida */}
       {issuedTicket && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 text-center space-y-4 sm:space-y-5 shadow-2xl animate-fade-in relative overflow-hidden my-auto max-h-[92vh] overflow-y-auto">
+          <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-6 text-center space-y-4 sm:space-y-5 shadow-2xl animate-fade-in relative overflow-hidden my-auto max-h-[92vh] overflow-y-auto">
             <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center space-x-2 text-emerald-400">
-                <CheckCircle2 className="w-5 h-5" />
-                <span className="text-xs font-bold uppercase tracking-wider text-white">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
                   Senha Emitida com Sucesso
                 </span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 font-mono">
                 {issuedTicket.createdAt.toLocaleTimeString('pt-BR')}
               </span>
             </div>
@@ -865,47 +865,47 @@ export default function TriagemTotemPage() {
 
             {/* Mensagem de Sucesso no Cancelamento */}
             {cancelSuccessMsg && (
-              <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 animate-fade-in shadow-lg">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <div className="p-4 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 dark:bg-emerald-950/80 dark:border-emerald-500/50 dark:text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 animate-fade-in shadow-lg">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>{cancelSuccessMsg}</span>
               </div>
             )}
 
             {/* Painel de Justificativa de Cancelamento */}
             {showCancelPrompt && !cancelSuccessMsg ? (
-              <div className="space-y-3 p-4 rounded-2xl bg-rose-950/40 border border-rose-900/60 text-left animate-fade-in">
-                <div className="flex items-start gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0 mt-0.5">
-                    <AlertTriangle className="w-4 h-4" />
+              <div className="space-y-3.5 p-4 sm:p-5 rounded-2xl bg-rose-50/95 border-2 border-rose-300 dark:bg-rose-950/40 dark:border-rose-900/60 text-left animate-fade-in shadow-md">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-rose-100 border border-rose-300 text-rose-600 dark:bg-rose-500/20 dark:border-rose-500/30 dark:text-rose-400 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                    <AlertTriangle className="w-5 h-5" />
                   </div>
                   <div className="space-y-0.5 min-w-0">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-rose-200">
+                    <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-rose-950 dark:text-rose-200">
                       Cancelar Senha {issuedTicket.formattedTicket}
                     </h4>
-                    <p className="text-[11px] text-rose-300/80 leading-snug">
+                    <p className="text-[11px] sm:text-xs text-rose-900 dark:text-rose-300/90 leading-snug font-medium">
                       A senha será removida da fila. Justificativa obrigatória (mínimo de 8 caracteres):
                     </p>
                   </div>
                 </div>
 
                 {cancelError && (
-                  <div className="p-2.5 rounded-xl bg-rose-900/50 border border-rose-700/60 text-xs text-rose-200 font-semibold flex items-center gap-2">
-                    <XCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <div className="p-3 rounded-xl bg-rose-100/90 border border-rose-300 text-rose-900 dark:bg-rose-900/50 dark:border-rose-700/60 dark:text-rose-200 text-xs font-semibold flex items-center gap-2">
+                    <XCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
                     <span>{cancelError}</span>
                   </div>
                 )}
 
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-[11px]">
-                    <label htmlFor="cancel-reason-input" className="font-bold text-slate-300 flex items-center gap-1">
+                    <label htmlFor="cancel-reason-input" className="font-bold text-slate-900 dark:text-slate-300 flex items-center gap-1">
                       <span>Motivo do Cancelamento</span>
-                      <span className="text-rose-400">*</span>
+                      <span className="text-rose-600 dark:text-rose-400">*</span>
                     </label>
                     <span
                       className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
                         cancelReason.trim().length >= 8
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30'
+                          : 'bg-rose-100 text-rose-800 border border-rose-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                       }`}
                     >
                       {cancelReason.trim().length} / 8 mín.
@@ -923,13 +923,13 @@ export default function TriagemTotemPage() {
                     }}
                     rows={3}
                     placeholder="Descreva o motivo do cancelamento... (mínimo de 8 caracteres)"
-                    className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs placeholder:text-slate-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 resize-none font-sans"
+                    className="w-full p-3 rounded-xl bg-white dark:bg-slate-950 border-2 border-rose-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 resize-none font-sans shadow-2xs"
                     disabled={isCancelling}
                     autoFocus
                   />
                 </div>
 
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5 pt-1.5">
                   <button
                     type="button"
                     onClick={() => {
@@ -938,7 +938,7 @@ export default function TriagemTotemPage() {
                       setCancelError(null)
                     }}
                     disabled={isCancelling}
-                    className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full sm:flex-1 py-3 px-4 min-h-[44px] rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center text-center shadow-2xs"
                   >
                     Voltar
                   </button>
@@ -946,17 +946,17 @@ export default function TriagemTotemPage() {
                     type="button"
                     onClick={handleConfirmCancelTicket}
                     disabled={cancelReason.trim().length < 8 || isCancelling}
-                    className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-lg shadow-rose-600/30 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full sm:flex-1 py-3 px-4 min-h-[44px] rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-rose-600/30 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {isCancelling ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Cancelando...</span>
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0 text-white" />
+                        <span className="leading-none">Cancelando...</span>
                       </>
                     ) : (
                       <>
-                        <XCircle className="w-4 h-4" />
-                        <span>Confirmar Cancelamento</span>
+                        <XCircle className="w-4 h-4 shrink-0 text-white" />
+                        <span className="leading-none">Confirmar Cancelamento</span>
                       </>
                     )}
                   </button>
@@ -968,9 +968,9 @@ export default function TriagemTotemPage() {
                 <button
                   type="button"
                   onClick={handlePrintTicket}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-xl shadow-emerald-500/20 active:scale-[0.99] cursor-pointer"
+                  className="w-full py-3.5 sm:py-4 px-4 min-h-[48px] rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-500/20 active:scale-[0.99] cursor-pointer"
                 >
-                  <Printer className="w-5 h-5" />
+                  <Printer className="w-5 h-5 shrink-0" />
                   <span>Imprimir Senha</span>
                 </button>
 
@@ -981,9 +981,9 @@ export default function TriagemTotemPage() {
                     setCancelReason('')
                     setCancelError(null)
                   }}
-                  className="w-full py-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all cursor-pointer active:scale-[0.99]"
+                  className="w-full py-3 sm:py-3.5 px-4 min-h-[44px] rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-rose-200 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:text-rose-400 dark:hover:text-rose-300 dark:border-rose-500/30 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] shadow-2xs"
                 >
-                  <XCircle className="w-4 h-4 text-rose-400" />
+                  <XCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
                   <span>Cancelar Senha</span>
                 </button>
 
@@ -994,7 +994,7 @@ export default function TriagemTotemPage() {
                     setShowCancelPrompt(false)
                     setCancelReason('')
                   }}
-                  className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                  className="w-full py-3 px-4 min-h-[44px] rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 dark:border-transparent dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-2xs flex items-center justify-center"
                 >
                   Concluir / Emitir Nova Senha
                 </button>
