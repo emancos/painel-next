@@ -807,7 +807,7 @@ export default function TriagemTotemPage() {
                 )}
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">NA FILA:</span>
-                  <span className="font-bold text-emerald-700">{issuedTicket.peopleAhead} aguardando</span>
+                  <span className="font-bold text-emerald-700">{issuedTicket.peopleAhead} pessoa(s) à frente</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-500">EMISSÃO:</span>
