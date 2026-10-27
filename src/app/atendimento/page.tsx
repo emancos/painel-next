@@ -671,7 +671,7 @@ export default function AtendimentoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8 justify-between admin-page-container transition-colors duration-200 relative overflow-hidden">
+    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-4 sm:p-6 md:p-8 justify-between admin-page-container transition-colors duration-200 relative overflow-hidden">
       {/* Luzes de Fundo Ambientais */}
       <div className="mesh-orb-cyan -top-24 -left-24 w-96 h-96 opacity-40 dark:opacity-30 pointer-events-none" />
       <div className="mesh-orb-emerald top-1/2 -right-24 w-[450px] h-[450px] opacity-35 dark:opacity-20 pointer-events-none" />
@@ -837,7 +837,7 @@ export default function AtendimentoPage() {
                 </div>
               </div>
             ) : (
-              <div className="card-boom card-boom-cyan p-8 flex flex-col justify-between relative overflow-hidden flex-1">
+              <div className="card-boom card-boom-cyan p-4 sm:p-6 md:p-8 flex flex-col justify-between relative overflow-hidden flex-1">
                 {/* Aura de Iluminação Radial do Miolo */}
                 <div className="absolute inset-0 m-auto w-80 h-80 rounded-full bg-cyan-400/10 dark:bg-cyan-500/15 blur-3xl pointer-events-none" />
 
@@ -956,7 +956,7 @@ export default function AtendimentoPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="my-auto text-center p-8 space-y-3 text-slate-400 dark:text-slate-500 z-10">
+                  <div className="my-auto text-center p-4 sm:p-8 space-y-3 text-slate-400 dark:text-slate-500 z-10">
                     <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700/60 flex items-center justify-center mx-auto text-cyan-600 dark:text-cyan-400 shadow-sm animate-pulse">
                       <Tag className="w-8 h-8" />
                     </div>
@@ -995,10 +995,10 @@ export default function AtendimentoPage() {
                     <button
                       onClick={handleCallNext}
                       disabled={isPending || waitingQueue.length === 0}
-                      className="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-lg flex items-center justify-center space-x-3 transition-all shadow-xl shadow-cyan-500/25 active:scale-[0.99] disabled:opacity-40 btn-boom"
+                      className="w-full py-4 sm:py-5 px-4 min-h-[56px] rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-sm sm:text-base md:text-lg flex items-center justify-center gap-2.5 sm:gap-3 transition-all shadow-xl shadow-cyan-500/25 active:scale-[0.99] disabled:opacity-40 btn-boom"
                     >
-                      <Megaphone className="w-6 h-6" />
-                      <span>CHAMAR PRÓXIMA SENHA</span>
+                      <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
+                      <span className="leading-none text-center">CHAMAR PRÓXIMA SENHA</span>
                     </button>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">

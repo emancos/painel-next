@@ -55,17 +55,22 @@ body {
   color: #0f172a !important;
 }
 
-/* Mantém botões com gradientes e textos brancos vibrantes em tema claro */
-[data-admin-theme='light'] .admin-page-container button[class*='from-'],
-[data-admin-theme='light'] .admin-page-container a[class*='from-'],
-[data-admin-theme='light'] .admin-page-container .btn-boom {
+/* Mantém botões com gradientes e textos brancos vibrantes em tema claro, exceto botões com texto escuro text-slate-950 */
+[data-admin-theme='light'] .admin-page-container button[class*='from-']:not(.text-slate-950),
+[data-admin-theme='light'] .admin-page-container a[class*='from-']:not(.text-slate-950),
+[data-admin-theme='light'] .admin-page-container .btn-boom:not(.text-slate-950) {
   color: #ffffff !important;
 }
 
-[data-admin-theme='light'] .admin-page-container button[class*='from-'] *,
-[data-admin-theme='light'] .admin-page-container a[class*='from-'] *,
-[data-admin-theme='light'] .admin-page-container .btn-boom * {
+[data-admin-theme='light'] .admin-page-container button[class*='from-']:not(.text-slate-950) *,
+[data-admin-theme='light'] .admin-page-container a[class*='from-']:not(.text-slate-950) *,
+[data-admin-theme='light'] .admin-page-container .btn-boom:not(.text-slate-950) * {
   color: #ffffff !important;
+}
+
+[data-admin-theme='light'] .admin-page-container .text-slate-950,
+[data-admin-theme='light'] .admin-page-container .text-slate-950 * {
+  color: #020617 !important;
 }
 
 /* Sub-containers internos, caixas aninhadas e fundos de tabela (bg-slate-950) ganham fundo slate suave para profundidade, exceto badges */
@@ -274,10 +279,35 @@ body {
 /* Botões com bg-slate-800 e bg-slate-900 em tema claro */
 [data-admin-theme='light'] .admin-page-container button[class*='bg-slate-800'],
 [data-admin-theme='light'] .admin-page-container a[class*='bg-slate-800'],
-[data-admin-theme='light'] .admin-page-container [class*='bg-slate-800']:not(.text-slate-950) {
+[data-admin-theme='light'] .admin-page-container [class*='bg-slate-800']:not(.text-slate-950):not([class*='peer']):not([class*='peer-checked']) {
   background-color: #f1f5f9 !important;
   border-color: #cbd5e1 !important;
   color: #0f172a !important;
+}
+
+/* Toggles de Notificação ('Alertas Ativos') e Switches: preservam cores vibrantes e trilho idênticos em ambos os temas */
+[data-admin-theme='light'] .admin-page-container div[class*='peer-checked'],
+[data-admin-theme='light'] .admin-page-container div[class*='peer'][class*='rounded-full'] {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container input.peer:checked ~ div[class*='peer-checked:bg-cyan-500'],
+[data-admin-theme='light'] .admin-page-container input:checked + div[class*='peer-checked:bg-cyan-500'],
+[data-admin-theme='light'] .admin-page-container input[type='checkbox']:checked ~ div[class*='peer-checked:bg-cyan-500'] {
+  background-color: #06b6d4 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container input.peer:checked ~ div[class*='peer-checked:bg-purple-500'],
+[data-admin-theme='light'] .admin-page-container input:checked + div[class*='peer-checked:bg-purple-500'],
+[data-admin-theme='light'] .admin-page-container input[type='checkbox']:checked ~ div[class*='peer-checked:bg-purple-500'] {
+  background-color: #a855f7 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container input.peer:checked ~ div[class*='peer-checked:bg-emerald-500'],
+[data-admin-theme='light'] .admin-page-container input:checked + div[class*='peer-checked:bg-emerald-500'],
+[data-admin-theme='light'] .admin-page-container input[type='checkbox']:checked ~ div[class*='peer-checked:bg-emerald-500'] {
+  background-color: #10b981 !important;
 }
 
 [data-admin-theme='light'] .admin-page-container button[class*='bg-slate-800']:hover,
