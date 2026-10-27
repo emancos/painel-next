@@ -23,6 +23,8 @@ export interface IssuedTicketNotificationData {
   ticketNumber?: number
   serviceId: string
   serviceName: string
+  roomId?: string | null
+  roomName?: string | null
   priorityId: number
   priorityName: string
   priorityColor?: string
@@ -31,14 +33,15 @@ export interface IssuedTicketNotificationData {
   assignedUserId?: string | null
 }
 
-const STORAGE_KEY = 'atendimento_notification_settings_v1'
+const STORAGE_KEY = 'atendimento_notification_settings_v2'
+const OLD_STORAGE_KEY = 'atendimento_notification_settings_v1'
 
 const DEFAULT_SETTINGS: AttendantNotificationSettings = {
   soundEnabled: true,
   visualEnabled: true,
   soundType: 'chime',
   volume: 0.7,
-  notifyOnlyEligibleServices: false,
+  notifyOnlyEligibleServices: true,
 }
 
 class AttendantNotificationManager {
@@ -62,6 +65,22 @@ class AttendantNotificationManager {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
         return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) }
+      }
+
+      // Migração suave a partir da v1: preserva som e volume, mas ativa isolamento por padrão
+      const oldStored = localStorage.getItem(OLD_STORAGE_KEY)
+      if (oldStored) {
+        const parsedOld = JSON.parse(oldStored)
+        const migrated: AttendantNotificationSettings = {
+          ...DEFAULT_SETTINGS,
+          soundEnabled: parsedOld.soundEnabled ?? DEFAULT_SETTINGS.soundEnabled,
+          visualEnabled: parsedOld.visualEnabled ?? DEFAULT_SETTINGS.visualEnabled,
+          soundType: parsedOld.soundType ?? DEFAULT_SETTINGS.soundType,
+          volume: parsedOld.volume ?? DEFAULT_SETTINGS.volume,
+          notifyOnlyEligibleServices: true, // Novo padrão isolado
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+        return migrated
       }
     } catch (err) {
       console.warn('[NotificationManager] Erro ao carregar configurações:', err)

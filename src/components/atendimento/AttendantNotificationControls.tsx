@@ -313,31 +313,29 @@ export function AttendantNotificationControls({ eligibleServicesCount = 0 }: Pro
             </p>
           </div>
 
-          {/* 3. Filtro de Serviços */}
-          {eligibleServicesCount > 0 && (
-            <div className="flex items-start justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 gap-3">
-              <div className="space-y-0.5">
-                <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                  Filtrar por Serviços deste Guichê
-                </span>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
-                  {settings.notifyOnlyEligibleServices
-                    ? 'Tocando apenas senhas elegíveis para seu posto.'
-                    : 'Tocando para qualquer nova senha emitida na unidade.'}
-                </p>
-              </div>
-
-              <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
-                <input
-                  type="checkbox"
-                  checked={settings.notifyOnlyEligibleServices}
-                  onChange={handleToggleFilterServices}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-5 bg-slate-300 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
-              </label>
+          {/* 3. Filtro de Posto, Sala e Serviços */}
+          <div className="flex items-start justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 gap-3">
+            <div className="space-y-0.5">
+              <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                Isolar Alertas por Posto / Sala
+              </span>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+                {settings.notifyOnlyEligibleServices
+                  ? 'Tocando apenas senhas da sua sala e serviços elegíveis.'
+                  : 'Tocando para qualquer nova senha emitida na unidade.'}
+              </p>
             </div>
-          )}
+
+            <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+              <input
+                type="checkbox"
+                checked={settings.notifyOnlyEligibleServices}
+                onChange={handleToggleFilterServices}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5 bg-slate-300 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
         </div>
       )}
     </div>
