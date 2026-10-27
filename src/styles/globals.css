@@ -575,7 +575,7 @@ body {
 @media print {
   @page {
     size: auto;
-    margin: 8mm 10mm;
+    margin: 0mm;
   }
 
   html, body {
@@ -596,8 +596,11 @@ body {
   .admin-page-container > header,
   .admin-page-container > nav,
   .admin-page-container > footer,
-  .admin-page-container > div:not(:has(#print-report-container)),
+  .admin-page-container > main:not(:has(#print-report-container)):not(:has(#thermal-ticket-container)),
+  .admin-page-container > div:not(:has(#print-report-container)):not(#thermal-ticket-container):not(:has(#thermal-ticket-container)),
   .admin-page-container > .mesh-orb-cyan,
+  .admin-page-container > .mesh-orb-amber,
+  .admin-page-container > .mesh-orb-purple,
   .admin-page-container > .mesh-orb-indigo,
   .admin-page-container > .mesh-orb-emerald {
     display: none !important;
@@ -615,8 +618,15 @@ body {
     box-shadow: none !important;
   }
 
-  /* Seletor seguro para páginas onde o container térmico estiver ativo (totem de triagem) */
-  body:has(#thermal-ticket-container) > *:not(:has(#thermal-ticket-container)) {
+  /* Quando o container do cupom térmico estiver presente (totem de triagem) */
+  body:has(#thermal-ticket-container) .no-print,
+  body:has(#thermal-ticket-container) header,
+  body:has(#thermal-ticket-container) main,
+  body:has(#thermal-ticket-container) footer,
+  body:has(#thermal-ticket-container) nav,
+  body:has(#thermal-ticket-container) .mesh-orb-cyan,
+  body:has(#thermal-ticket-container) .mesh-orb-amber,
+  body:has(#thermal-ticket-container) .mesh-orb-purple {
     display: none !important;
   }
 
@@ -629,7 +639,7 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 8mm 10mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
@@ -651,20 +661,22 @@ body {
     display: table-header-group !important;
   }
 
-  /* Cupom Térmico (Totem de Triagem - 80mm) */
+  /* Cupom Térmico (Totem de Triagem - 80mm / 58mm) */
   #thermal-ticket-container {
     display: block !important;
     position: relative !important;
     margin: 0 auto !important;
-    width: 80mm !important;
+    width: 74mm !important;
     max-width: 80mm !important;
-    padding: 2mm 2mm 8mm 2mm !important;
+    padding: 2mm 2mm 6mm 2mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
     border: none !important;
     text-align: center !important;
     visibility: visible !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   #thermal-ticket-container * {

@@ -324,12 +324,12 @@ export default function TriagemTotemPage() {
   return (
     <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col justify-between p-6 md:p-10 admin-page-container transition-colors duration-200 relative overflow-hidden">
       {/* Luzes de Fundo Ambientais */}
-      <div className="mesh-orb-cyan -top-24 -left-24 w-96 h-96 opacity-40 dark:opacity-30 pointer-events-none" />
-      <div className="mesh-orb-amber top-1/2 -right-24 w-[450px] h-[450px] opacity-35 dark:opacity-20 pointer-events-none" />
-      <div className="mesh-orb-purple -bottom-24 left-1/3 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none" />
+      <div className="mesh-orb-cyan -top-24 -left-24 w-96 h-96 opacity-40 dark:opacity-30 pointer-events-none no-print" />
+      <div className="mesh-orb-amber top-1/2 -right-24 w-[450px] h-[450px] opacity-35 dark:opacity-20 pointer-events-none no-print" />
+      <div className="mesh-orb-purple -bottom-24 left-1/3 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none no-print" />
 
       {/* Topo do Totem com Identidade Institucional da Unidade e Identificação do Operador */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800 z-10">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800 z-10 no-print">
         <div className="flex items-center space-x-4">
           {currentUser?.role === 'ADMIN' ? (
             <Link
@@ -399,7 +399,7 @@ export default function TriagemTotemPage() {
       </header>
 
       {/* Conteúdo Central */}
-      <main className="max-w-5xl w-full mx-auto my-6 space-y-6 flex-1 flex flex-col justify-center z-10">
+      <main className="max-w-5xl w-full mx-auto my-6 space-y-6 flex-1 flex flex-col justify-center z-10 no-print">
         {errorMsg && (
           <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-800 dark:text-rose-200 text-sm font-bold shadow-xs">
             {errorMsg}
