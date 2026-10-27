@@ -32,8 +32,11 @@ import {
   RotateCcw,
   Clock,
   AlertTriangle,
-  Globe
+  Globe,
+  FileSpreadsheet
 } from 'lucide-react'
+import { NavbarShortcuts } from '@/components/NavbarShortcuts'
+import { AdminReportsTab } from '@/components/admin/AdminReportsTab'
 import { 
   getUnitsList, 
   createUnit, 
@@ -76,7 +79,7 @@ import { setDocumentFavicon } from '@/lib/favicon'
 export default function AdminPage() {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string; avatarUrl?: string | null } | null>(null)
-  const [activeTab, setActiveTab] = useState<'UNITS' | 'STRUCTURE' | 'LOCATIONS' | 'SERVICES' | 'USERS' | 'SPEECH' | 'ATTENDANCE'>('UNITS')
+  const [activeTab, setActiveTab] = useState<'UNITS' | 'STRUCTURE' | 'LOCATIONS' | 'SERVICES' | 'USERS' | 'SPEECH' | 'ATTENDANCE' | 'REPORTS'>('UNITS')
   const [isPending, startTransition] = useTransition()
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
@@ -175,6 +178,14 @@ export default function AdminPage() {
         setCurrentUser(u)
       }
     })
+
+    // Suporte a deep link para aba de relatórios
+    if (typeof window !== 'undefined') {
+      const tabParam = new URLSearchParams(window.location.search).get('tab')
+      if (tabParam === 'reports') {
+        setActiveTab('REPORTS')
+      }
+    }
 
     loadAllData()
   }, [])
@@ -752,8 +763,8 @@ export default function AdminPage() {
       <div className="mesh-orb-emerald -bottom-24 left-1/3 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none" />
 
       {/* Header do Painel de Administração */}
-      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4 z-10">
-        <div className="flex items-center space-x-4">
+      <header className="flex flex-col md:flex-row items-start md:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4 z-10">
+        <div className="flex items-center space-x-3 sm:space-x-4">
           <Link
             href="/"
             className="h-11 w-11 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all flex items-center justify-center shrink-0 shadow-xs hover:scale-105"
@@ -762,58 +773,31 @@ export default function AdminPage() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               Painel de Administração{' '}
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold shadow-xs">
+              <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold shadow-xs">
                 Gestão Global
               </span>
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Unidades, Brasões, Andares, Salas, Mesas/Guichês, Usuários e Voz Neural
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+              Unidades, Brasões, Salas, Mesas, Serviços, Usuários e Relatórios
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3 shrink-0 flex-wrap gap-y-2">
-          {/* Unidade Selecionada no Header */}
-          {selectedUnit && (
-            <div className="hidden lg:flex items-center h-11 space-x-3 px-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 shadow-xs">
-              {selectedUnit.logoUrl ? (
-                <img
-                  src={selectedUnit.logoUrl}
-                  alt="Brasão"
-                  className="w-7 h-7 object-contain rounded-lg bg-white/10 p-0.5 border border-slate-300 dark:border-slate-700/60"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 font-bold flex items-center justify-center text-xs">
-                  {selectedUnit.code?.slice(0, 2) || 'UN'}
-                </div>
-              )}
-              <div className="text-left leading-tight">
-                <div className="flex items-center space-x-1.5">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white block">{selectedUnit.name}</span>
-                  <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 bg-slate-200/60 dark:bg-slate-950 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-800">
-                    {selectedUnit.code}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 mt-0.5">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block max-w-[150px] truncate">{selectedUnit.subtitle || 'Unidade'}</span>
-                  <span className="text-[10px] text-cyan-700 dark:text-cyan-300 font-mono flex items-center gap-1 bg-cyan-500/10 px-1.5 py-0.2 rounded border border-cyan-500/25">
-                    <Globe className="w-2.5 h-2.5" />
-                    {selectedUnit.timezone || 'America/Sao_Paulo'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 flex-wrap gap-y-2 w-full md:w-auto justify-between md:justify-end">
+          {/* Atalhos de Navegação por Perfil */}
+          <NavbarShortcuts user={currentUser} unitId={selectedUnitId} />
 
-          {/* Alternador de Tema Claro / Escuro (Admin) */}
-          <AdminThemeToggle />
+          <div className="flex items-center space-x-2">
+            {/* Alternador de Tema Claro / Escuro (Admin) */}
+            <AdminThemeToggle />
 
-          {/* Administrador Logado com Link para Perfil e Avatar */}
-          {currentUser && (
-            <UserNavbarBadge user={currentUser} onLogout={handleLogout} />
-          )}
+            {/* Administrador Logado com Link para Perfil e Avatar */}
+            {currentUser && (
+              <UserNavbarBadge user={currentUser} onLogout={handleLogout} />
+            )}
+          </div>
         </div>
       </header>
 
@@ -835,7 +819,7 @@ export default function AdminPage() {
       )}
 
       {/* Navegação por Abas com Estilo Elevado */}
-      <div className="flex items-center space-x-2 my-6 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto z-10">
+      <div className="flex items-center space-x-2 my-6 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto no-scrollbar z-10">
         <button
           onClick={() => setActiveTab('UNITS')}
           className={`h-11 flex items-center space-x-2 px-4 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
@@ -918,6 +902,18 @@ export default function AdminPage() {
         >
           <Shuffle className="w-4 h-4" />
           <span>7. Ordem de Atendimento & Fila</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('REPORTS')}
+          className={`h-11 flex items-center space-x-2 px-4 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
+            activeTab === 'REPORTS'
+              ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 btn-boom'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent hover:border-slate-300 dark:hover:border-slate-800'
+          }`}
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          <span>8. Consulta & Relatórios PDF</span>
         </button>
       </div>
 
@@ -1145,7 +1141,7 @@ export default function AdminPage() {
               {units.map((u) => (
                 <div
                   key={u.id}
-                  className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${
+                  className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                     selectedUnitId === u.id
                       ? 'border-cyan-500/60 bg-cyan-950/20'
                       : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'
@@ -1394,7 +1390,7 @@ export default function AdminPage() {
                   <p className="text-xs text-slate-500 text-center py-4">Nenhuma sala cadastrada.</p>
                 ) : (
                   rooms.map((r) => (
-                    <div key={r.id} className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+                    <div key={r.id} className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                       <div>
                         <div className="flex items-center space-x-2">
                           <span className="font-bold text-white text-base">{r.name}</span>
@@ -2011,7 +2007,7 @@ export default function AdminPage() {
               {usersList.map((u) => {
                 const roleBadge = getUserRoleBadge(u.role)
                 return (
-                  <div key={u.id} className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+                  <div key={u.id} className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-800 text-cyan-400 flex items-center justify-center font-bold shrink-0 border border-slate-700 relative">
                         {u.avatarUrl ? (
@@ -2938,6 +2934,20 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ========================================================
+          ABA 8: CONSULTA DE SENHAS & RELATÓRIOS PDF
+         ======================================================== */}
+      {activeTab === 'REPORTS' && (
+        <AdminReportsTab
+          units={units}
+          selectedUnitId={selectedUnitId}
+          rooms={rooms}
+          services={servicesList}
+          usersList={usersList}
+          currentUser={currentUser}
+        />
       )}
     </div>
   )
