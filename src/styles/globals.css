@@ -570,12 +570,12 @@ body {
 }
 
 /* ========================================================
-   IMPRESSÃO TÉRMICA DE SENHAS (58mm / 80mm ESC/POS)
+   IMPRESSÃO TÉRMICA E RELATÓRIOS PDF
    ======================================================== */
 @media print {
   @page {
     size: auto;
-    margin: 0mm;
+    margin: 8mm 10mm;
   }
 
   html, body {
@@ -583,59 +583,91 @@ body {
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
-    font-size: 12px !important;
-    line-height: 1.25 !important;
+    font-size: 11px !important;
+    line-height: 1.3 !important;
     width: 100% !important;
-    min-height: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
-  /* Esconde todos os elementos da interface do totem/página */
-  body * {
-    visibility: hidden !important;
+  /* Oculta completamente elementos que não devem ser impressos (display: none remove do fluxo de páginas) */
+  .no-print,
+  .admin-page-container > header,
+  .admin-page-container > nav,
+  .admin-page-container > footer,
+  .admin-page-container > div:not(:has(#print-report-container)),
+  .admin-page-container > .mesh-orb-cyan,
+  .admin-page-container > .mesh-orb-indigo,
+  .admin-page-container > .mesh-orb-emerald {
+    display: none !important;
   }
 
-  /* Revela e centraliza perfeitamente o cupom térmico OU o relatório administrativo */
-  #thermal-ticket-container,
-  #thermal-ticket-container *,
-  #print-report-container,
+  /* Reset dos containers da página de administração para evitar páginas extras */
+  .admin-page-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Seletor seguro para páginas onde o container térmico estiver ativo (totem de triagem) */
+  body:has(#thermal-ticket-container) > *:not(:has(#thermal-ticket-container)) {
+    display: none !important;
+  }
+
+  /* Relatório Administrativo em PDF (A4) - Ocupa apenas o fluxo normal exato do seu conteúdo */
+  #print-report-container {
+    display: block !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    visibility: visible !important;
+  }
+
   #print-report-container * {
     visibility: visible !important;
   }
 
+  /* Previne quebra de linhas no meio de registros e garante cabeçalho repetido */
+  #print-report-container tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #print-report-container thead {
+    display: table-header-group !important;
+  }
+
+  /* Cupom Térmico (Totem de Triagem - 80mm) */
   #thermal-ticket-container {
     display: block !important;
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: 5mm !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
+    position: relative !important;
+    margin: 0 auto !important;
     width: 80mm !important;
     max-width: 80mm !important;
-    padding: 4mm 4mm 15mm 4mm !important;
+    padding: 2mm 2mm 8mm 2mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
     border: none !important;
     text-align: center !important;
+    visibility: visible !important;
   }
 
-  #print-report-container {
-    display: block !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 8mm !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-
-  /* Não imprime elementos marcados com no-print */
-  .no-print {
-    display: none !important;
+  #thermal-ticket-container * {
+    visibility: visible !important;
   }
 }

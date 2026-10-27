@@ -284,9 +284,11 @@ export function AdminReportsTab({
   const activeUnit = units.find((u) => u.id === filterUnitId) || units[0]
 
   return (
-    <div className="space-y-6">
-      {/* 1. Header do Módulo de Relatórios */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-slate-900/60 border border-slate-800 shadow-sm relative overflow-hidden">
+    <div>
+      {/* Conteúdo de Tela do Módulo (Ocultado completamente na Impressão/PDF) */}
+      <div className="no-print space-y-6">
+        {/* 1. Header do Módulo de Relatórios */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-slate-900/60 border border-slate-800 shadow-sm relative overflow-hidden">
         <div className="space-y-1 z-10">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
@@ -947,12 +949,13 @@ export function AdminReportsTab({
           </div>
         </div>
       )}
+      </div>
 
       {/* ========================================================
           DOCUMENTO OFICIAL FORMATADO PARA IMPRESSÃO / SALVAR COMO PDF
           (Visível apenas quando window.print() é disparado via @media print)
          ======================================================== */}
-      <div id="print-report-container" className="hidden print:block text-black bg-white p-8">
+      <div id="print-report-container" className="hidden print:block text-black bg-white p-0">
         {/* Cabeçalho Institucional do Relatório */}
         <div className="flex items-center justify-between border-b-2 border-slate-800 pb-4 mb-6">
           <div className="flex items-center gap-4">
@@ -1113,7 +1116,7 @@ export function AdminReportsTab({
         )}
 
         {/* Rodapé da Impressão */}
-        <div className="mt-8 pt-4 border-t border-slate-400 text-center text-[9px] text-slate-500">
+        <div className="mt-4 pt-2 border-t border-slate-300 text-center text-[9px] text-slate-500">
           Documento gerado automaticamente pelo Sistema Operacional de Chamadas e Atendimento • Página 1
         </div>
       </div>

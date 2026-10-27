@@ -758,12 +758,12 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col p-6 md:p-8 admin-page-container transition-colors duration-200 relative overflow-hidden">
       {/* Luzes de Fundo Ambientais */}
-      <div className="mesh-orb-cyan -top-24 -left-24 w-96 h-96 opacity-40 dark:opacity-30 pointer-events-none" />
-      <div className="mesh-orb-indigo top-1/2 -right-24 w-[450px] h-[450px] opacity-35 dark:opacity-20 pointer-events-none" />
-      <div className="mesh-orb-emerald -bottom-24 left-1/3 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none" />
+      <div className="mesh-orb-cyan -top-24 -left-24 w-96 h-96 opacity-40 dark:opacity-30 pointer-events-none no-print" />
+      <div className="mesh-orb-indigo top-1/2 -right-24 w-[450px] h-[450px] opacity-35 dark:opacity-20 pointer-events-none no-print" />
+      <div className="mesh-orb-emerald -bottom-24 left-1/3 w-96 h-96 opacity-30 dark:opacity-20 pointer-events-none no-print" />
 
       {/* Header do Painel de Administração */}
-      <header className="flex flex-col md:flex-row items-start md:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4 z-10">
+      <header className="flex flex-col md:flex-row items-start md:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4 z-10 no-print">
         <div className="flex items-center space-x-3 sm:space-x-4">
           <Link
             href="/"
@@ -804,7 +804,7 @@ export default function AdminPage() {
       {/* Alerta de Feedback */}
       {feedback && (
         <div
-          className={`mt-4 p-4 rounded-2xl border text-xs font-bold flex items-center justify-between animate-fade-in shadow-xs z-10 ${
+          className={`mt-4 p-4 rounded-2xl border text-xs font-bold flex items-center justify-between animate-fade-in shadow-xs z-10 no-print ${
             feedback.type === 'success'
               ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-800 dark:text-emerald-300'
               : 'bg-rose-500/15 border-rose-500/35 text-rose-800 dark:text-rose-300'
@@ -819,7 +819,7 @@ export default function AdminPage() {
       )}
 
       {/* Navegação por Abas com Estilo Elevado */}
-      <div className="flex items-center space-x-2 my-6 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto no-scrollbar z-10">
+      <div className="flex items-center space-x-2 my-6 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto no-scrollbar z-10 no-print">
         <button
           onClick={() => setActiveTab('UNITS')}
           className={`h-11 flex items-center space-x-2 px-4 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
