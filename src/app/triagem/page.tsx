@@ -215,8 +215,8 @@ export default function TriagemTotemPage() {
   const handleConfirmCancelTicket = async () => {
     if (!issuedTicket) return
     const reason = cancelReason.trim()
-    if (reason.length < 8) {
-      setCancelError('A justificativa de cancelamento é obrigatória e deve conter pelo menos 8 caracteres.')
+    if (reason.length < 10) {
+      setCancelError('A justificativa de cancelamento é obrigatória e deve conter pelo menos 10 caracteres.')
       return
     }
 
@@ -883,7 +883,7 @@ export default function TriagemTotemPage() {
                       Cancelar Senha {issuedTicket.formattedTicket}
                     </h4>
                     <p className="text-[11px] sm:text-xs text-rose-900 dark:text-rose-300/90 leading-snug font-medium">
-                      A senha será removida da fila. Justificativa obrigatória (mínimo de 8 caracteres):
+                      A senha será removida da fila. Justificativa obrigatória (mínimo de 10 caracteres):
                     </p>
                   </div>
                 </div>
@@ -903,12 +903,12 @@ export default function TriagemTotemPage() {
                     </label>
                     <span
                       className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
-                        cancelReason.trim().length >= 8
+                        cancelReason.trim().length >= 10
                           ? 'bg-emerald-100 text-emerald-900 border border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30'
                           : 'bg-rose-100 text-rose-800 border border-rose-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                       }`}
                     >
-                      {cancelReason.trim().length} / 8 mín.
+                      {cancelReason.trim().length} / 10 mín.
                     </span>
                   </div>
 
@@ -917,12 +917,12 @@ export default function TriagemTotemPage() {
                     value={cancelReason}
                     onChange={(e) => {
                       setCancelReason(e.target.value)
-                      if (cancelError && e.target.value.trim().length >= 8) {
+                      if (cancelError && e.target.value.trim().length >= 10) {
                         setCancelError(null)
                       }
                     }}
                     rows={3}
-                    placeholder="Descreva o motivo do cancelamento... (mínimo de 8 caracteres)"
+                    placeholder="Descreva o motivo do cancelamento... (mínimo de 10 caracteres)"
                     className="w-full p-3 rounded-xl bg-white dark:bg-slate-950 border-2 border-rose-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 resize-none font-sans shadow-2xs"
                     disabled={isCancelling}
                     autoFocus
@@ -945,7 +945,7 @@ export default function TriagemTotemPage() {
                   <button
                     type="button"
                     onClick={handleConfirmCancelTicket}
-                    disabled={cancelReason.trim().length < 8 || isCancelling}
+                    disabled={cancelReason.trim().length < 10 || isCancelling}
                     className="w-full sm:flex-1 py-3 px-4 min-h-[44px] rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-rose-600/30 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {isCancelling ? (
