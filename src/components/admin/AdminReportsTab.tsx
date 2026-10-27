@@ -198,6 +198,26 @@ export function AdminReportsTab({
     }
   }
 
+  // Status Label Helper (Nomes Amigáveis para Exibição / PDF)
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'FINISHED':
+        return 'Concluído'
+      case 'IN_PROGRESS':
+        return 'Em Atendimento'
+      case 'CALLED':
+        return 'Chamada'
+      case 'ISSUED':
+        return 'Na Fila'
+      case 'NO_SHOW':
+        return 'Não Compareceu'
+      case 'CANCELLED':
+        return 'Cancelada'
+      default:
+        return status
+    }
+  }
+
   // Status Badge Helper
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -595,22 +615,22 @@ export function AdminReportsTab({
         </div>
 
         {/* Visualização Desktop (Tabela Completa com Scroll Seguro) */}
-        <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-800">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/80 text-[11px] uppercase font-bold text-slate-400 border-b border-slate-800">
+        <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40">
+          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+            <thead className="bg-slate-100 dark:bg-slate-950/80 text-[11px] uppercase font-bold text-slate-700 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="py-3 px-3.5">Senha</th>
-                <th className="py-3 px-3.5">Cidadão / Doc</th>
-                <th className="py-3 px-3.5">Serviço</th>
-                <th className="py-3 px-3.5">Sala / Posto</th>
-                <th className="py-3 px-3.5">Atendente</th>
-                <th className="py-3 px-3.5">Emissão</th>
-                <th className="py-3 px-3.5">Espera</th>
-                <th className="py-3 px-3.5">Atendimento</th>
-                <th className="py-3 px-3.5 text-right">Status</th>
+                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Senha</th>
+                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Cidadão / Doc</th>
+                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Serviço</th>
+                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Sala / Posto</th>
+                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Atendente</th>
+                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Emissão</th>
+                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Espera</th>
+                <th className="py-3 px-3.5 text-slate-700 dark:text-slate-400">Atendimento</th>
+                <th className="py-3 px-3.5 text-right text-slate-700 dark:text-slate-400">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-medium">
               {paginatedTickets.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-slate-500">
@@ -619,11 +639,11 @@ export function AdminReportsTab({
                 </tr>
               ) : (
                 paginatedTickets.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-800/40 transition-colors">
+                  <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                     {/* Senha e Prioridade */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-black text-sm text-white">
+                        <span className="font-mono font-black text-sm text-slate-900 dark:text-white">
                           {t.formattedTicket}
                         </span>
                         <span
@@ -641,7 +661,7 @@ export function AdminReportsTab({
 
                     {/* Cidadão / Doc */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className="text-white block font-bold truncate max-w-[150px]">
+                      <span className="text-slate-900 dark:text-white block font-bold truncate max-w-[150px]">
                         {t.customerName || 'Não identificado'}
                       </span>
                       {t.customerDoc && (
@@ -653,18 +673,18 @@ export function AdminReportsTab({
 
                     {/* Serviço */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className="text-slate-200 block truncate max-w-[140px]">
+                      <span className="text-slate-800 dark:text-slate-200 block truncate max-w-[140px]">
                         {t.serviceName}
                       </span>
                     </td>
 
                     {/* Sala / Local */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className="text-slate-300 block truncate max-w-[120px]">
+                      <span className="text-slate-700 dark:text-slate-300 block truncate max-w-[120px]">
                         {t.roomName || 'Geral'}
                       </span>
                       {t.locationName && (
-                        <span className="text-[10px] text-cyan-400 font-mono block">
+                        <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono block">
                           {t.locationName} {t.locationNumber}
                         </span>
                       )}
@@ -672,23 +692,23 @@ export function AdminReportsTab({
 
                     {/* Atendente */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className="text-slate-300 block truncate max-w-[120px]">
+                      <span className="text-slate-700 dark:text-slate-300 block truncate max-w-[120px]">
                         {t.attendantName || '--'}
                       </span>
                     </td>
 
                     {/* Horário de Emissão */}
-                    <td className="py-3 px-3.5 whitespace-nowrap text-slate-400 font-mono text-[11px]">
+                    <td className="py-3 px-3.5 whitespace-nowrap text-slate-600 dark:text-slate-400 font-mono text-[11px]">
                       {formatTimeOnly(t.createdAt)}
                     </td>
 
                     {/* Tempo de Espera */}
-                    <td className="py-3 px-3.5 whitespace-nowrap font-mono text-[11px] text-sky-400">
+                    <td className="py-3 px-3.5 whitespace-nowrap font-mono text-[11px] text-sky-600 dark:text-sky-400">
                       {formatDuration(t.waitTimeSeconds)}
                     </td>
 
                     {/* Tempo de Atendimento */}
-                    <td className="py-3 px-3.5 whitespace-nowrap font-mono text-[11px] text-indigo-400">
+                    <td className="py-3 px-3.5 whitespace-nowrap font-mono text-[11px] text-indigo-600 dark:text-indigo-400">
                       {formatDuration(t.serviceTimeSeconds)}
                     </td>
 
@@ -894,7 +914,7 @@ export function AdminReportsTab({
           </div>
           <div>
             <span className="font-bold text-slate-700">Status: </span>
-            <span>{filterStatus === 'ALL' ? 'Todos os Status' : filterStatus}</span>
+            <span>{filterStatus === 'ALL' ? 'Todos os Status' : getStatusLabel(filterStatus)}</span>
           </div>
           <div>
             <span className="font-bold text-slate-700">Sala: </span>
@@ -1001,7 +1021,7 @@ export function AdminReportsTab({
                     <td className="py-1 px-2 font-mono">{formatTimeOnly(t.createdAt)}</td>
                     <td className="py-1 px-2 font-mono">{formatDuration(t.waitTimeSeconds)}</td>
                     <td className="py-1 px-2 font-mono">{formatDuration(t.serviceTimeSeconds)}</td>
-                    <td className="py-1 px-2 text-right font-bold">{t.status}</td>
+                    <td className="py-1 px-2 text-right font-bold">{getStatusLabel(t.status)}</td>
                   </tr>
                 ))}
               </tbody>

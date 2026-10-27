@@ -73,10 +73,35 @@ body {
 [data-admin-theme='light'] .admin-page-container form[class*='bg-slate-950'],
 [data-admin-theme='light'] .admin-page-container section[class*='bg-slate-950'],
 [data-admin-theme='light'] .admin-page-container table[class*='bg-slate-950'],
-[data-admin-theme='light'] .admin-page-container tbody[class*='bg-slate-950'] {
+[data-admin-theme='light'] .admin-page-container tbody[class*='bg-slate-950'],
+[data-admin-theme='light'] .admin-page-container thead {
   background-color: #f8fafc !important;
   border-color: #e2e8f0 !important;
   color: #0f172a !important;
+}
+
+/* Headers e células de cabeçalho de tabelas no tema claro com contraste perfeito */
+[data-admin-theme='light'] .admin-page-container thead,
+[data-admin-theme='light'] .admin-page-container thead[class*='bg-slate-950'] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container thead th,
+[data-admin-theme='light'] .admin-page-container th {
+  color: #1e293b !important;
+  font-weight: 700 !important;
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container tr:hover,
+[data-admin-theme='light'] .admin-page-container tr[class*='hover:bg-slate-800']:hover {
+  background-color: #f8fafc !important;
+}
+
+[data-admin-theme='light'] .admin-page-container tbody[class*='divide-slate-800'] > tr {
+  border-color: #e2e8f0 !important;
 }
 
 /* Badges e tags selecionadas com fundo escuro preservam contraste com fundo escuro e texto branco */
@@ -146,6 +171,12 @@ body {
 [data-admin-theme='light'] .admin-page-container .text-cyan-300,
 [data-admin-theme='light'] .admin-page-container .text-cyan-400 {
   color: #0e7490 !important;
+}
+
+[data-admin-theme='light'] .admin-page-container .text-sky-200,
+[data-admin-theme='light'] .admin-page-container .text-sky-300,
+[data-admin-theme='light'] .admin-page-container .text-sky-400 {
+  color: #0369a1 !important;
 }
 
 [data-admin-theme='light'] .admin-page-container .text-emerald-200,
