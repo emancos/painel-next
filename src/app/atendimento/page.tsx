@@ -64,6 +64,7 @@ interface LocationItem {
   number: number
   roomId?: string | null
   roomName?: string | null
+  roomNumber?: string | null
   currentUserId?: string | null
 }
 

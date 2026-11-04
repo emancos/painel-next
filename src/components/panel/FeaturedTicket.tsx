@@ -17,6 +17,7 @@ export interface FeaturedTicketData {
   locationPlace?: string
   floorName?: string | null
   roomName?: string | null
+  roomNumber?: string | null
 }
 
 interface FeaturedTicketProps {
@@ -251,7 +252,12 @@ export function FeaturedTicket({
                     }`}
                   >
                     <DoorOpen className={`w-3.5 h-3.5 shrink-0 ${isLight ? 'text-purple-700' : 'text-purple-400'}`} />
-                    <span>{ticket.roomName}</span>
+                    <span>
+                      {ticket.roomName}
+                      {ticket.roomNumber && !ticket.roomName.includes(ticket.roomNumber)
+                        ? ` ${ticket.roomNumber}`
+                        : ''}
+                    </span>
                   </span>
                 )}
               </div>

@@ -40,6 +40,7 @@ interface ServiceItem {
   attendantName?: string | null
   locationName?: string | null
   roomName?: string | null
+  roomNumber?: string | null
 }
 
 interface PriorityItem {
@@ -76,6 +77,7 @@ interface IssuedTicketModalData {
   unitSubtitle?: string | null
   unitLogoUrl?: string | null
   roomName?: string | null
+  roomNumber?: string | null
   floorName?: string | null
 }
 
@@ -197,7 +199,8 @@ export default function TriagemTotemPage() {
           unitName: unit.name,
           unitSubtitle: unit.subtitle || null,
           unitLogoUrl: unit.logoUrl || null,
-          roomName: selectedRoom ? selectedRoom.name : (service.roomName || null),
+          roomName: selectedRoom ? selectedRoom.name : (res.roomName || service.roomName || null),
+          roomNumber: selectedRoom ? selectedRoom.number : (res.roomNumber || service.roomNumber || null),
           floorName: selectedRoomFloor ? selectedRoomFloor.name : null,
         })
 
@@ -832,6 +835,7 @@ export default function TriagemTotemPage() {
                     <span className="font-bold text-indigo-900 text-right">
                       {issuedTicket.floorName ? `${issuedTicket.floorName} • ` : ''}
                       {issuedTicket.roomName}
+                      {issuedTicket.roomNumber && !issuedTicket.roomName?.includes(issuedTicket.roomNumber) ? ` ${issuedTicket.roomNumber}` : ''}
                     </span>
                   </div>
                 )}
@@ -1051,6 +1055,7 @@ export default function TriagemTotemPage() {
                   <span>
                     {issuedTicket.floorName ? `${issuedTicket.floorName} - ` : ''}
                     {issuedTicket.roomName}
+                    {issuedTicket.roomNumber && !issuedTicket.roomName?.includes(issuedTicket.roomNumber) ? ` ${issuedTicket.roomNumber}` : ''}
                   </span>
                 </div>
               )}

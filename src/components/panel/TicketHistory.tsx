@@ -14,6 +14,7 @@ export interface HistoryTicketItem {
   locationShort?: string
   floorName?: string | null
   roomName?: string | null
+  roomNumber?: string | null
   calledAt?: Date | string | null
 }
 
@@ -37,7 +38,12 @@ function parseLocation(item: HistoryTicketItem): { place: string; cascade: strin
 
   let cascade = ''
   if (item.floorName || item.roomName) {
-    cascade = [item.floorName, item.roomName].filter(Boolean).join(' • ')
+    const roomStr = item.roomName
+      ? (item.roomNumber && !item.roomName.includes(item.roomNumber)
+          ? `${item.roomName} ${item.roomNumber}`
+          : item.roomName)
+      : (item.roomNumber ? `Sala ${item.roomNumber}` : null)
+    cascade = [item.floorName, roomStr].filter(Boolean).join(' • ')
   } else if (parts.length > 1) {
     cascade = parts.slice(0, -1).join(' • ')
   }

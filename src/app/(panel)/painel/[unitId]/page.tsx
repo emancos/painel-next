@@ -39,6 +39,7 @@ interface SseTicketPayload {
     locationPlace?: string
     floorName?: string | null
     roomName?: string | null
+    roomNumber?: string | null
   }
   speech: {
     plainText: string
@@ -251,6 +252,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
           locationShort: prev.locationShort,
           floorName: prev.floorName,
           roomName: prev.roomName,
+          roomNumber: prev.roomNumber,
           calledAt: new Date(),
         }
         return [retiredTicket, ...filtered].slice(0, 8)
@@ -443,6 +445,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
             locationShort: payload.ticket.locationShort,
             floorName: payload.ticket.floorName,
             roomName: payload.ticket.roomName,
+            roomNumber: payload.ticket.roomNumber,
           }
 
           // Enfileira a nova chamada garantindo que ela não atropela a que está na tela
