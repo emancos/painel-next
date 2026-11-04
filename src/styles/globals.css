@@ -77,6 +77,7 @@ body {
 [data-admin-theme='light'] .admin-page-container div[class*='bg-slate-950'],
 [data-admin-theme='light'] .admin-page-container form[class*='bg-slate-950'],
 [data-admin-theme='light'] .admin-page-container section[class*='bg-slate-950'],
+[data-admin-theme='light'] .admin-page-container label[class*='bg-slate-950'],
 [data-admin-theme='light'] .admin-page-container table[class*='bg-slate-950'],
 [data-admin-theme='light'] .admin-page-container tbody[class*='bg-slate-950'],
 [data-admin-theme='light'] .admin-page-container thead {
@@ -276,13 +277,28 @@ body {
   color: #1e293b !important;
 }
 
-/* Botões com bg-slate-800 e bg-slate-900 em tema claro */
+/* Botões com bg-slate-800, bg-slate-900 e bg-slate-950 em tema claro */
 [data-admin-theme='light'] .admin-page-container button[class*='bg-slate-800'],
+[data-admin-theme='light'] .admin-page-container button[class*='bg-slate-900'],
+[data-admin-theme='light'] .admin-page-container button[class*='bg-slate-950']:not([class*='bg-cyan']):not([class*='from-']):not(.keep-dark),
 [data-admin-theme='light'] .admin-page-container a[class*='bg-slate-800'],
 [data-admin-theme='light'] .admin-page-container [class*='bg-slate-800']:not(.text-slate-950):not([class*='peer']):not([class*='peer-checked']) {
   background-color: #f1f5f9 !important;
   border-color: #cbd5e1 !important;
   color: #0f172a !important;
+}
+
+[data-admin-theme='light'] .admin-page-container button[class*='bg-slate-950']:not([class*='bg-cyan']):not([class*='from-']):not(.keep-dark):hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Botões com estado ativo cyan (ex: prefixos selecionados) */
+[data-admin-theme='light'] .admin-page-container button[class*='bg-cyan-500/'],
+[data-admin-theme='light'] .admin-page-container div[class*='bg-cyan-500/'] {
+  background-color: #e0f2fe !important;
+  border-color: #06b6d4 !important;
+  color: #0c4a6e !important;
 }
 
 /* Toggles de Notificação ('Alertas Ativos') e Switches: preservam cores vibrantes e trilho idênticos em ambos os temas */
