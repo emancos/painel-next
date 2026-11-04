@@ -12,6 +12,8 @@ export interface SpeechTicketInput {
   locationNumber?: number
   floorName?: string | null
   roomName?: string | null
+  roomNumber?: string | null
+  roomPrefix?: string | null
   customerName?: string | null
   priorityName?: string
 }
@@ -25,6 +27,8 @@ export interface SpeechConfigOptions {
   pauseDuration?: string // '200ms', '350ms', '500ms'
   includeCustomerName?: boolean
   lgpdMode?: boolean
+  roomPrefix?: string // Prefixo configurado para o número da sala: 'Sala', 'Ambulatório', 'Consultório', ou vazio (sem prefixo), ou personalizado
+  customRoomPrefixes?: string[] // Lista de prefixos personalizados salvos pelo administrador
 }
 
 export interface SpeechOutput {
@@ -138,14 +142,117 @@ export function naturalizeLocation(locationName?: string, locationNumber?: numbe
 }
 
 /**
+ * Normaliza e formata o nome e número da sala para fala e exibição.
+ * Suporta prefixo opcional antes do número (ex: "Sala", "Ambulatório", "Consultório", "Box", ou personalizado).
+ * Ex: "Regulação TFD", "9", "Sala" -> { spoken: "Regulação TFD Sala nove", formatted: "Regulação TFD Sala 09" }
+ * Ex: "Regulação TFD", "9", "" -> { spoken: "Regulação TFD nove", formatted: "Regulação TFD 09" }
+ * Ex: "Consultório", "01", "Sala" -> { spoken: "Consultório um", formatted: "Consultório 01" }
+ * Ex: null, "03", "Ambulatório" -> { spoken: "Ambulatório três", formatted: "Ambulatório 03" }
+ */
+export function naturalizeRoom(
+  roomName?: string | null,
+  roomNumber?: string | null,
+  roomPrefix?: string | null
+): { spoken: string; formatted: string } {
+  const name = roomName?.trim() || ''
+  const rawNum = roomNumber?.trim() || ''
+
+  if (!name && !rawNum) {
+    return { spoken: '', formatted: '' }
+  }
+
+  // Se não foi informado número da sala, usa apenas o nome
+  if (!rawNum) {
+    return { spoken: name, formatted: name }
+  }
+
+  // Verifica se o número é numérico (ex: "1", "01", "102")
+  const parsedNum = parseInt(rawNum, 10)
+  const isNumeric = !isNaN(parsedNum) && /^\d+$/.test(rawNum)
+
+  // Texto falado para o número (ex: 1 -> "um", 12 -> "doze", 101 -> "101")
+  const spokenNum = isNumeric && parsedNum in NUMBER_WORDS
+    ? NUMBER_WORDS[parsedNum]
+    : rawNum
+
+  // Formatação visual do número: se numérico e menor que 100, padroniza com 2 dígitos (ex: "01", "02")
+  const formattedNum = isNumeric && parsedNum < 100
+    ? parsedNum.toString().padStart(2, '0')
+    : rawNum
+
+  const cleanPrefix = roomPrefix?.trim() || ''
+
+  // Monta a forma do número com ou sem prefixo
+  let effectiveNumSpoken = spokenNum
+  let effectiveNumFormatted = formattedNum
+
+  if (cleanPrefix) {
+    const startsWithPrefixRegex = new RegExp(`^${cleanPrefix}\\s*`, 'i')
+    if (startsWithPrefixRegex.test(rawNum)) {
+      // Já contém o prefixo no rawNum (ex: rawNum = "Sala 9")
+      effectiveNumSpoken = spokenNum
+      effectiveNumFormatted = formattedNum
+    } else {
+      // Verifica se o nome da sala já é o prefixo ou termina com o prefixo
+      const nameEqualsPrefix = name.toLowerCase() === cleanPrefix.toLowerCase()
+      const nameEndsWithPrefix = name.toLowerCase().endsWith(' ' + cleanPrefix.toLowerCase())
+
+      if (!nameEqualsPrefix && !nameEndsWithPrefix) {
+        effectiveNumSpoken = `${cleanPrefix} ${spokenNum}`
+        effectiveNumFormatted = `${cleanPrefix} ${formattedNum}`
+      }
+    }
+  }
+
+  // Caso 1: Não há nome da sala informado, apenas o número (ex: "01" -> "Sala 01" / "Sala um")
+  if (!name) {
+    const fallbackPrefix = cleanPrefix || 'Sala'
+    return {
+      spoken: effectiveNumSpoken.toLowerCase().startsWith(fallbackPrefix.toLowerCase())
+        ? effectiveNumSpoken
+        : `${fallbackPrefix} ${spokenNum}`,
+      formatted: effectiveNumFormatted.toLowerCase().startsWith(fallbackPrefix.toLowerCase())
+        ? effectiveNumFormatted
+        : `${fallbackPrefix} ${formattedNum}`,
+    }
+  }
+
+  // Caso 2: O nome da sala já contém o número informado (ex: "Consultório 01" ou "Sala 101")
+  const numRegex = new RegExp(`\\b0*${isNumeric ? parsedNum : rawNum}\\b`, 'i')
+  if (numRegex.test(name)) {
+    return {
+      spoken: isNumeric && parsedNum in NUMBER_WORDS ? name.replace(numRegex, spokenNum) : name,
+      formatted: name,
+    }
+  }
+
+  // Caso 3: Se o nome for apenas "Sala"
+  if (name.toLowerCase() === 'sala') {
+    const p = cleanPrefix || 'Sala'
+    return {
+      spoken: `${p} ${spokenNum}`,
+      formatted: `${p} ${formattedNum}`,
+    }
+  }
+
+  // Caso 4: Nome e número combinados (ex: "Regulação TFD Sala nove" / "Regulação TFD Sala 09")
+  return {
+    spoken: `${name} ${effectiveNumSpoken}`.trim(),
+    formatted: `${name} ${effectiveNumFormatted}`.trim(),
+  }
+}
+
+/**
  * Formata o destino de atendimento em cascata (Andar -> Sala -> Posto/Mesa)
  */
 export function formatLocationCascade(
   floorName?: string | null,
   roomName?: string | null,
+  roomNumber?: string | null,
   locationName?: string | null,
-  locationNumber?: number | null
-): { formatted: string; place: string; short: string } {
+  locationNumber?: number | null,
+  roomPrefix?: string | null
+): { formatted: string; place: string; short: string; roomFormatted: string } {
   const place = locationName && locationNumber !== null && locationNumber !== undefined
     ? `${locationName} ${locationNumber.toString().padStart(2, '0')}`
     : 'Guichê 01'
@@ -153,15 +260,18 @@ export function formatLocationCascade(
     ? locationNumber.toString().padStart(2, '0')
     : '01'
 
+  const room = naturalizeRoom(roomName, roomNumber, roomPrefix)
+
   const parts: string[] = []
   if (floorName?.trim()) parts.push(floorName.trim())
-  if (roomName?.trim()) parts.push(roomName.trim())
+  if (room.formatted) parts.push(room.formatted)
   parts.push(place)
 
   return {
     formatted: parts.join(' • '),
     place,
     short,
+    roomFormatted: room.formatted,
   }
 }
 
@@ -180,20 +290,22 @@ export function buildTicketAnnouncement(
   const pauseDuration = options?.pauseDuration || '300ms'
   const includeName = options?.includeCustomerName ?? true
   const lgpd = options?.lgpdMode ?? false
+  const roomPrefix = input.roomPrefix !== undefined ? input.roomPrefix : options?.roomPrefix
 
   const customerName = naturalizeCustomerName(input.customerName, lgpd)
   const digitsSpoken = spellOutNumber(input.ticketNumber, 3)
   const prefix = input.ticketPrefix.toUpperCase().trim()
 
   const loc = naturalizeLocation(input.locationName, input.locationNumber)
+  const room = naturalizeRoom(input.roomName, input.roomNumber, roomPrefix)
 
   // Monta localização em cascata objetiva: Andar -> Sala -> Posto/Mesa
   const cascadeParts: string[] = []
   if (input.floorName && input.floorName.trim()) {
     cascadeParts.push(input.floorName.trim())
   }
-  if (input.roomName && input.roomName.trim()) {
-    cascadeParts.push(input.roomName.trim())
+  if (room.spoken) {
+    cascadeParts.push(room.spoken)
   }
   if (loc.spoken) {
     cascadeParts.push(loc.spoken)
