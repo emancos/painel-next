@@ -100,6 +100,16 @@ export default function AdminPage() {
   const [speechPauseDuration, setSpeechPauseDuration] = useState('300ms')
   const [speechIncludeCustomerName, setSpeechIncludeCustomerName] = useState(true)
   const [speechLgpdMode, setSpeechLgpdMode] = useState(false)
+  const [speechRoomPrefix, setSpeechRoomPrefix] = useState('')
+  const [customRoomPrefixes, setCustomRoomPrefixes] = useState<string[]>([
+    'Sala',
+    'Ambulatório',
+    'Consultório',
+    'Box',
+    'Guichê',
+    'Módulo',
+  ])
+  const [newPrefixInput, setNewPrefixInput] = useState('')
 
   // Testes do Simulador
   const [simName, setSimName] = useState('MARIA DA SILVA SANTOS')
@@ -107,6 +117,8 @@ export default function AdminPage() {
   const [simNumber, setSimNumber] = useState(1)
   const [simLocName, setSimLocName] = useState('Guichê')
   const [simLocNumber, setSimLocNumber] = useState(3)
+  const [simRoomName, setSimRoomName] = useState('Regulação TFD')
+  const [simRoomNumber, setSimRoomNumber] = useState('9')
   const [simPreviewText, setSimPreviewText] = useState<string | null>(null)
   const [isSimCalling, setIsSimCalling] = useState(false)
 
@@ -229,6 +241,10 @@ export default function AdminPage() {
       setSpeechPauseDuration(speechCfg.pauseDuration || '300ms')
       setSpeechIncludeCustomerName(speechCfg.includeCustomerName ?? true)
       setSpeechLgpdMode(speechCfg.lgpdMode ?? false)
+      setSpeechRoomPrefix(speechCfg.roomPrefix ?? '')
+      if (Array.isArray(speechCfg.customRoomPrefixes) && speechCfg.customRoomPrefixes.length > 0) {
+        setCustomRoomPrefixes(speechCfg.customRoomPrefixes)
+      }
     }
     if (attendanceCfg) {
       setAttendanceOrderMode(attendanceCfg.defaultOrderMode)
@@ -379,6 +395,28 @@ export default function AdminPage() {
   }
 
   // 6. CONFIGURAÇÃO DE VOZ E SIMULADOR
+  const handleAddCustomPrefix = () => {
+    const trimmed = newPrefixInput.trim()
+    if (!trimmed) return
+    const exists = customRoomPrefixes.some((p) => p.toLowerCase() === trimmed.toLowerCase())
+    if (!exists) {
+      const updated = [...customRoomPrefixes, trimmed]
+      setCustomRoomPrefixes(updated)
+      setSpeechRoomPrefix(trimmed)
+    } else {
+      setSpeechRoomPrefix(trimmed)
+    }
+    setNewPrefixInput('')
+  }
+
+  const handleRemoveCustomPrefix = (prefixToRemove: string) => {
+    const updated = customRoomPrefixes.filter((p) => p.toLowerCase() !== prefixToRemove.toLowerCase())
+    setCustomRoomPrefixes(updated)
+    if (speechRoomPrefix.toLowerCase() === prefixToRemove.toLowerCase()) {
+      setSpeechRoomPrefix('')
+    }
+  }
+
   const handleSaveSpeechConfig = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedUnitId) return
@@ -393,6 +431,8 @@ export default function AdminPage() {
           pauseDuration: speechPauseDuration,
           includeCustomerName: speechIncludeCustomerName,
           lgpdMode: speechLgpdMode,
+          roomPrefix: speechRoomPrefix,
+          customRoomPrefixes: customRoomPrefixes,
         })
         setFeedback({
           type: 'success',
@@ -415,6 +455,9 @@ export default function AdminPage() {
           formattedTicket: `${simPrefix}${simNumber.toString().padStart(3, '0')}`,
           locationName: simLocName,
           locationNumber: simLocNumber,
+          roomName: simRoomName,
+          roomNumber: simRoomNumber,
+          roomPrefix: speechRoomPrefix,
           customerName: simName,
           priorityName: simPrefix === 'SP' ? 'Prioritário' : 'Normal',
         },
@@ -427,6 +470,7 @@ export default function AdminPage() {
           pauseDuration: speechPauseDuration,
           includeCustomerName: speechIncludeCustomerName,
           lgpdMode: speechLgpdMode,
+          roomPrefix: speechRoomPrefix,
         }
       )
       setSimPreviewText(announcement.plainText)
@@ -2207,7 +2251,7 @@ export default function AdminPage() {
                       value={speechCallPrefix}
                       onChange={(e) => setSpeechCallPrefix(e.target.value)}
                       placeholder="Ex: Senha, Atenção: Senha, Chamando senha"
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-500 font-medium"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 font-medium"
                     />
                     <div className="flex gap-1.5 mt-2">
                       {['Senha', 'Atenção: Senha', 'Chamando senha'].map((p) => (
@@ -2215,7 +2259,7 @@ export default function AdminPage() {
                           key={p}
                           type="button"
                           onClick={() => setSpeechCallPrefix(p)}
-                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300"
+                          className="text-[10px] px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-transparent transition-colors"
                         >
                           {p}
                         </button>
@@ -2232,7 +2276,7 @@ export default function AdminPage() {
                       value={speechCallSuffix}
                       onChange={(e) => setSpeechCallSuffix(e.target.value)}
                       placeholder="Ex: Favor comparecer, Dirija-se, Por gentileza"
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-500 font-medium"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 font-medium"
                     />
                     <div className="flex gap-1.5 mt-2">
                       {['Favor comparecer', 'Dirija-se', 'Por gentileza, dirija-se'].map((s) => (
@@ -2240,11 +2284,111 @@ export default function AdminPage() {
                           key={s}
                           type="button"
                           onClick={() => setSpeechCallSuffix(s)}
-                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300"
+                          className="text-[10px] px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-transparent transition-colors"
                         >
                           {s}
                         </button>
                       ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Prefixo do Número da Sala / Ambulatório */}
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 space-y-3">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-0.5">
+                      Prefixo do Número da Sala / Ambulatório
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                      Adiciona um prefixo falado antes do número da sala (Ex: com prefixo &quot;Sala&quot;, a chamada diz &quot;Regulação TFD Sala 9&quot; em vez de &quot;Regulação TFD 9&quot;).
+                    </span>
+                  </div>
+
+                  {/* Botões de Seleção Rápida */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSpeechRoomPrefix('')}
+                      className={`text-xs px-3.5 py-1.5 rounded-xl border transition-all ${
+                        !speechRoomPrefix
+                          ? 'bg-cyan-50 border-2 border-cyan-500 text-cyan-800 dark:bg-cyan-500/20 dark:border-cyan-500 dark:text-cyan-300 font-bold shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200/80 border-slate-300 text-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800 dark:text-slate-300'
+                      }`}
+                    >
+                      Sem Prefixo
+                    </button>
+                    {customRoomPrefixes.map((p) => {
+                      const isSelected = speechRoomPrefix.trim().toLowerCase() === p.trim().toLowerCase()
+                      return (
+                        <div key={p} className="inline-flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => setSpeechRoomPrefix(p)}
+                            className={`text-xs px-3.5 py-1.5 rounded-l-xl border-y border-l transition-all ${
+                              isSelected
+                                ? 'bg-cyan-50 border-2 border-cyan-500 text-cyan-800 dark:bg-cyan-500/20 dark:border-cyan-500 dark:text-cyan-300 font-bold shadow-xs'
+                                : 'bg-slate-100 hover:bg-slate-200/80 border-slate-300 text-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800 dark:text-slate-300'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCustomPrefix(p)}
+                            title={`Remover prefixo "${p}"`}
+                            className={`text-xs px-2.5 py-1.5 rounded-r-xl border transition-all ${
+                              isSelected
+                                ? 'bg-cyan-50 border-2 border-l-0 border-cyan-500 text-cyan-800 hover:bg-rose-100 hover:text-rose-600 dark:bg-cyan-500/20 dark:border-cyan-500 dark:text-cyan-300 dark:hover:bg-rose-500/20 dark:hover:text-rose-400'
+                                : 'bg-slate-100 hover:bg-rose-100 border-slate-300 text-slate-400 hover:text-rose-600 dark:bg-slate-900 dark:hover:bg-slate-800 dark:border-slate-800 dark:text-slate-500 dark:hover:text-rose-400'
+                            }`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Campos de Input e Cadastro Personalizado */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                        Prefixo Selecionado
+                      </span>
+                      <input
+                        type="text"
+                        value={speechRoomPrefix}
+                        onChange={(e) => setSpeechRoomPrefix(e.target.value)}
+                        placeholder="Vazio = Sem prefixo (Ex: Sala, Ambulatório)"
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                        Cadastrar Novo Prefixo Personalizado
+                      </span>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newPrefixInput}
+                          onChange={(e) => setNewPrefixInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleAddCustomPrefix()
+                            }
+                          }}
+                          placeholder="Ex: Gabinete, Bloco, Módulo..."
+                          className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 font-medium"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddCustomPrefix}
+                          className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white transition-all shadow-xs active:scale-95 shrink-0"
+                        >
+                          + Adicionar
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2257,35 +2401,35 @@ export default function AdminPage() {
                 </label>
 
                 <div className="space-y-3">
-                  <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-colors">
+                  <label className="flex items-center space-x-3 cursor-pointer p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 dark:bg-slate-950/70 dark:hover:bg-slate-950 dark:border-slate-800 transition-colors">
                     <input
                       type="checkbox"
                       checked={speechIncludeCustomerName}
                       onChange={(e) => setSpeechIncludeCustomerName(e.target.checked)}
-                      className="w-4 h-4 rounded text-cyan-500 focus:ring-0 bg-slate-900 border-slate-700"
+                      className="w-4 h-4 rounded text-cyan-600 dark:text-cyan-500 focus:ring-0 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
                     />
                     <div>
-                      <span className="text-xs font-bold text-white block">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white block">
                         Pronunciar o Nome do Cidadão na Chamada
                       </span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
                         Quando ativo, fala o nome cadastrado no totem de triagem antes da senha.
                       </span>
                     </div>
                   </label>
 
-                  <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-colors">
+                  <label className="flex items-center space-x-3 cursor-pointer p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 dark:bg-slate-950/70 dark:hover:bg-slate-950 dark:border-slate-800 transition-colors">
                     <input
                       type="checkbox"
                       checked={speechLgpdMode}
                       onChange={(e) => setSpeechLgpdMode(e.target.checked)}
-                      className="w-4 h-4 rounded text-cyan-500 focus:ring-0 bg-slate-900 border-slate-700"
+                      className="w-4 h-4 rounded text-cyan-600 dark:text-cyan-500 focus:ring-0 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
                     />
                     <div>
-                      <span className="text-xs font-bold text-white block">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white block">
                         Modo LGPD: Anonimizar com Inicial do Sobrenome
                       </span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
                         Proteção de dados: &quot;Maria da Silva Santos&quot; será pronunciado como &quot;Maria S.&quot;.
                       </span>
                     </div>
@@ -2318,52 +2462,80 @@ export default function AdminPage() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
                       Nome do Cidadão para Teste
                     </label>
                     <input
                       type="text"
                       value={simName}
                       onChange={(e) => setSimName(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-medium focus:outline-none focus:border-cyan-500"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium focus:outline-none focus:border-cyan-500"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
                         Prefixo
                       </label>
                       <input
                         type="text"
                         value={simPrefix}
                         onChange={(e) => setSimPrefix(e.target.value.toUpperCase())}
-                        className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono font-bold focus:outline-none focus:border-cyan-500"
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500"
                       />
                     </div>
 
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
                         Número
                       </label>
                       <input
                         type="number"
                         value={simNumber}
                         onChange={(e) => setSimNumber(Number(e.target.value))}
-                        className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono font-bold focus:outline-none focus:border-cyan-500"
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                        Sala / Setor (Nome)
+                      </label>
+                      <input
+                        type="text"
+                        value={simRoomName}
+                        onChange={(e) => setSimRoomName(e.target.value)}
+                        placeholder="Ex: Regulação TFD"
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                        Número da Sala
+                      </label>
+                      <input
+                        type="text"
+                        value={simRoomNumber}
+                        onChange={(e) => setSimRoomNumber(e.target.value)}
+                        placeholder="Ex: 9"
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
                         Posto / Local
                       </label>
                       <select
                         value={simLocName}
                         onChange={(e) => setSimLocName(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-medium focus:outline-none focus:border-cyan-500"
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-medium focus:outline-none focus:border-cyan-500"
                       >
                         <option value="Guichê">Guichê</option>
                         <option value="Mesa">Mesa</option>
@@ -2373,25 +2545,25 @@ export default function AdminPage() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
                         Número do Posto
                       </label>
                       <input
                         type="number"
                         value={simLocNumber}
                         onChange={(e) => setSimLocNumber(Number(e.target.value))}
-                        className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono font-bold focus:outline-none focus:border-cyan-500"
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Prévia da Fala Calculada */}
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                  <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider block">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <span className="text-[11px] font-bold text-cyan-700 dark:text-cyan-400 uppercase tracking-wider block">
                     Texto Naturalizado Resultante:
                   </span>
-                  <p className="text-xs text-slate-300 font-medium italic">
+                  <p className="text-xs text-slate-700 dark:text-slate-300 font-medium italic">
                     &quot;{
                       buildTicketAnnouncement(
                         {
@@ -2400,6 +2572,9 @@ export default function AdminPage() {
                           formattedTicket: `${simPrefix}${simNumber.toString().padStart(3, '0')}`,
                           locationName: simLocName,
                           locationNumber: simLocNumber,
+                          roomName: simRoomName,
+                          roomNumber: simRoomNumber,
+                          roomPrefix: speechRoomPrefix,
                           customerName: simName,
                           priorityName: simPrefix === 'SP' ? 'Prioritário' : 'Normal',
                         },
@@ -2412,6 +2587,7 @@ export default function AdminPage() {
                           pauseDuration: speechPauseDuration,
                           includeCustomerName: speechIncludeCustomerName,
                           lgpdMode: speechLgpdMode,
+                          roomPrefix: speechRoomPrefix,
                         }
                       ).plainText
                     }&quot;
