@@ -61,6 +61,7 @@ export async function getUnitData(unitId?: string) {
         currentUserId: locations.currentUserId,
         active: locations.active,
         roomName: rooms.name,
+        roomNumber: rooms.number,
         floorName: floors.name,
       })
       .from(locations)
@@ -78,6 +79,7 @@ export async function getUnitData(unitId?: string) {
     let effectiveRoomId = s.roomId || null
     let attendantLocationName: string | null = null
     let attendantRoomName: string | null = null
+    let attendantRoomNumber: string | null = null
 
     if (s.userId) {
       const loc = activeLocations.find((l) => l.currentUserId === s.userId)
@@ -86,6 +88,7 @@ export async function getUnitData(unitId?: string) {
         if (loc.roomId) {
           effectiveRoomId = loc.roomId
           attendantRoomName = loc.roomName || null
+          attendantRoomNumber = loc.roomNumber || null
         }
       }
     }
@@ -96,6 +99,7 @@ export async function getUnitData(unitId?: string) {
       attendantName: s.attendantName || null,
       locationName: attendantLocationName,
       roomName: attendantRoomName,
+      roomNumber: attendantRoomNumber,
     }
   })
 
@@ -234,15 +238,30 @@ export async function issueTicket(input: IssueTicketInput) {
     })
     .returning()
 
-  // 4.1 Identifica nome da sala se o serviço for vinculado a uma sala
+  // 4.1 Identifica nome e número da sala se o serviço for vinculado a uma sala ou operador
   let serviceRoomName: string | null = null
-  if (service.roomId) {
+  let serviceRoomNumber: string | null = null
+  let effectiveRoomId = service.roomId || null
+
+  if (!effectiveRoomId && service.userId) {
+    const [userLoc] = await db
+      .select({ roomId: locations.roomId })
+      .from(locations)
+      .where(and(eq(locations.currentUserId, service.userId), eq(locations.active, true)))
+      .limit(1)
+    if (userLoc?.roomId) {
+      effectiveRoomId = userLoc.roomId
+    }
+  }
+
+  if (effectiveRoomId) {
     const [roomRecord] = await db
-      .select({ name: rooms.name })
+      .select({ name: rooms.name, number: rooms.number })
       .from(rooms)
-      .where(eq(rooms.id, service.roomId))
+      .where(eq(rooms.id, effectiveRoomId))
       .limit(1)
     serviceRoomName = roomRecord?.name || null
+    serviceRoomNumber = roomRecord?.number || null
   }
 
   // 5. Notifica atendentes e painéis em tempo real
@@ -256,8 +275,9 @@ export async function issueTicket(input: IssueTicketInput) {
       ticketNumber,
       serviceId: input.serviceId,
       serviceName: service.name,
-      roomId: service.roomId || null,
+      roomId: effectiveRoomId,
       roomName: serviceRoomName,
+      roomNumber: serviceRoomNumber,
       priorityId: input.priorityId,
       priorityName: priority?.name || 'Normal',
       priorityColor: priority?.colorHex || '#06B6D4',
@@ -270,8 +290,9 @@ export async function issueTicket(input: IssueTicketInput) {
   return {
     ...newTicket,
     serviceName: service.name,
-    roomId: service.roomId || null,
+    roomId: effectiveRoomId,
     roomName: serviceRoomName,
+    roomNumber: serviceRoomNumber,
     priorityName: priority?.name || 'Normal',
     priorityColor: priority?.colorHex || '#06B6D4',
     peopleAhead,
@@ -281,40 +302,115 @@ export async function issueTicket(input: IssueTicketInput) {
 /**
  * Determina a sala e o andar efetivos de atendimento em cascata:
  * 1. Prioridade para a sala vinculada diretamente à Mesa/Guichê.
- * 2. Se a Mesa/Guichê for geral (sem sala cadastrada), herda a sala e andar vinculado ao Serviço da senha.
+ * 2. Se o serviço for vinculado a um operador específico (userId), resolve a sala da lotação desse operador.
+ * 3. Se a Mesa/Guichê for geral (sem sala cadastrada), herda a sala e andar vinculado ao Serviço da senha.
+ * 4. Fallback pela lotação do atendente que está realizando a chamada.
  */
-async function resolveEffectiveRoomAndFloor(
-  locationRoomName?: string | null,
-  locationFloorName?: string | null,
+async function resolveEffectiveRoomAndFloor(params: {
+  locationRoomId?: string | null
+  locationRoomName?: string | null
+  locationRoomNumber?: string | null
+  locationFloorName?: string | null
   serviceRoomId?: string | null
-): Promise<{ roomName: string | null; floorName: string | null }> {
-  if (locationRoomName) {
+  serviceUserId?: string | null
+  callingUserId?: string | null
+  unitId?: string | null
+}): Promise<{
+  roomId: string | null
+  roomName: string | null
+  roomNumber: string | null
+  floorName: string | null
+}> {
+  // 1. Prioridade para a sala vinculada diretamente à Mesa/Guichê
+  if (params.locationRoomName || params.locationRoomNumber) {
     return {
-      roomName: locationRoomName,
-      floorName: locationFloorName || null,
+      roomId: params.locationRoomId || null,
+      roomName: params.locationRoomName || null,
+      roomNumber: params.locationRoomNumber || null,
+      floorName: params.locationFloorName || null,
     }
   }
 
-  if (serviceRoomId) {
-    const [svcRoom] = await db
+  if (params.locationRoomId) {
+    const [locRoom] = await db
       .select({
-        roomName: rooms.name,
+        id: rooms.id,
+        name: rooms.name,
+        number: rooms.number,
         floorName: floors.name,
       })
       .from(rooms)
       .leftJoin(floors, eq(rooms.floorId, floors.id))
-      .where(eq(rooms.id, serviceRoomId))
+      .where(eq(rooms.id, params.locationRoomId))
+      .limit(1)
+
+    if (locRoom) {
+      return {
+        roomId: locRoom.id,
+        roomName: locRoom.name || null,
+        roomNumber: locRoom.number || null,
+        floorName: locRoom.floorName || null,
+      }
+    }
+  }
+
+  // 2. Se o serviço for vinculado a um operador específico (ou tiver callingUserId), resolve a sala da lotação desse operador
+  const targetUserId = params.serviceUserId || params.callingUserId
+  if (targetUserId) {
+    const [userLoc] = await db
+      .select({
+        roomId: locations.roomId,
+        roomName: rooms.name,
+        roomNumber: rooms.number,
+        floorName: floors.name,
+      })
+      .from(locations)
+      .leftJoin(rooms, eq(locations.roomId, rooms.id))
+      .leftJoin(floors, eq(rooms.floorId, floors.id))
+      .where(
+        and(
+          eq(locations.currentUserId, targetUserId),
+          eq(locations.active, true),
+          params.unitId ? eq(locations.unitId, params.unitId) : sql`TRUE`
+        )
+      )
+      .limit(1)
+
+    if (userLoc && (userLoc.roomName || userLoc.roomNumber)) {
+      return {
+        roomId: userLoc.roomId || null,
+        roomName: userLoc.roomName || null,
+        roomNumber: userLoc.roomNumber || null,
+        floorName: userLoc.floorName || null,
+      }
+    }
+  }
+
+  // 3. Herda a sala e andar vinculado ao Serviço da senha
+  if (params.serviceRoomId) {
+    const [svcRoom] = await db
+      .select({
+        id: rooms.id,
+        roomName: rooms.name,
+        roomNumber: rooms.number,
+        floorName: floors.name,
+      })
+      .from(rooms)
+      .leftJoin(floors, eq(rooms.floorId, floors.id))
+      .where(eq(rooms.id, params.serviceRoomId))
       .limit(1)
 
     if (svcRoom) {
       return {
+        roomId: svcRoom.id,
         roomName: svcRoom.roomName || null,
+        roomNumber: svcRoom.roomNumber || null,
         floorName: svcRoom.floorName || null,
       }
     }
   }
 
-  return { roomName: null, floorName: null }
+  return { roomId: null, roomName: null, roomNumber: null, floorName: null }
 }
 
 /**
@@ -568,6 +664,7 @@ export async function callNextTicket(params: {
       number: locations.number,
       roomId: locations.roomId,
       roomName: rooms.name,
+      roomNumber: rooms.number,
       floorName: floors.name,
     })
     .from(locations)
@@ -593,10 +690,26 @@ export async function callNextTicket(params: {
 
   // 4. Gerar fala naturalizada para o painel com as configurações da unidade em cascata
   const speechConfig = meta.speechConfig
-  const { roomName: effectiveRoomName, floorName: effectiveFloorName } =
-    await resolveEffectiveRoomAndFloor(location?.roomName, location?.floorName, nextItem?.service?.roomId)
+  const roomPrefix = speechConfig?.roomPrefix
+  const effectiveLocation = await resolveEffectiveRoomAndFloor({
+    locationRoomId: location?.roomId,
+    locationRoomName: location?.roomName,
+    locationRoomNumber: location?.roomNumber,
+    locationFloorName: location?.floorName,
+    serviceRoomId: nextItem?.service?.roomId,
+    serviceUserId: nextItem?.service?.userId,
+    callingUserId: params.userId,
+    unitId: params.unitId,
+  })
 
-  const locCascade = formatLocationCascade(effectiveFloorName, effectiveRoomName, location?.name, location?.number)
+  const locCascade = formatLocationCascade(
+    effectiveLocation.floorName,
+    effectiveLocation.roomName,
+    effectiveLocation.roomNumber,
+    location?.name,
+    location?.number,
+    roomPrefix
+  )
 
   const speech = buildTicketAnnouncement(
     {
@@ -605,8 +718,10 @@ export async function callNextTicket(params: {
       formattedTicket: updatedTicket.formattedTicket,
       locationName: location?.name,
       locationNumber: location?.number,
-      floorName: effectiveFloorName,
-      roomName: effectiveRoomName,
+      floorName: effectiveLocation.floorName,
+      roomName: effectiveLocation.roomName,
+      roomNumber: effectiveLocation.roomNumber,
+      roomPrefix,
       customerName: updatedTicket.customerName,
       priorityName: nextItem.priority.name,
     },
@@ -616,8 +731,8 @@ export async function callNextTicket(params: {
   console.log('[Chamada Painel] Chamada de senha emitida:', {
     ticket: updatedTicket.formattedTicket,
     mesa: `${location?.name} ${location?.number}`,
-    andar: effectiveFloorName,
-    sala: effectiveRoomName,
+    andar: effectiveLocation.floorName,
+    sala: locCascade.roomFormatted || effectiveLocation.roomName,
     textoVoz: speech.plainText,
   })
 
@@ -630,8 +745,9 @@ export async function callNextTicket(params: {
       locationName: locCascade.formatted,
       locationPlace: locCascade.place,
       locationShort: locCascade.short,
-      floorName: effectiveFloorName,
-      roomName: effectiveRoomName,
+      floorName: effectiveLocation.floorName,
+      roomName: locCascade.roomFormatted || effectiveLocation.roomName,
+      roomNumber: effectiveLocation.roomNumber,
     },
     speech,
   }
@@ -716,6 +832,7 @@ export async function callSpecificTicket(params: {
       number: locations.number,
       roomId: locations.roomId,
       roomName: rooms.name,
+      roomNumber: rooms.number,
       floorName: floors.name,
     })
     .from(locations)
@@ -746,10 +863,26 @@ export async function callSpecificTicket(params: {
 
   const meta = (unitRecord?.metadata as any) || {}
   const speechConfig = meta.speechConfig
-  const { roomName: effectiveRoomName, floorName: effectiveFloorName } =
-    await resolveEffectiveRoomAndFloor(location?.roomName, location?.floorName, targetItem?.service?.roomId)
+  const roomPrefix = speechConfig?.roomPrefix
+  const effectiveLocation = await resolveEffectiveRoomAndFloor({
+    locationRoomId: location?.roomId,
+    locationRoomName: location?.roomName,
+    locationRoomNumber: location?.roomNumber,
+    locationFloorName: location?.floorName,
+    serviceRoomId: targetItem?.service?.roomId,
+    serviceUserId: targetItem?.service?.userId,
+    callingUserId: params.userId,
+    unitId: params.unitId,
+  })
 
-  const locCascade = formatLocationCascade(effectiveFloorName, effectiveRoomName, location?.name, location?.number)
+  const locCascade = formatLocationCascade(
+    effectiveLocation.floorName,
+    effectiveLocation.roomName,
+    effectiveLocation.roomNumber,
+    location?.name,
+    location?.number,
+    roomPrefix
+  )
 
   const speech = buildTicketAnnouncement(
     {
@@ -758,8 +891,10 @@ export async function callSpecificTicket(params: {
       formattedTicket: updatedTicket.formattedTicket,
       locationName: location?.name,
       locationNumber: location?.number,
-      floorName: effectiveFloorName,
-      roomName: effectiveRoomName,
+      floorName: effectiveLocation.floorName,
+      roomName: effectiveLocation.roomName,
+      roomNumber: effectiveLocation.roomNumber,
+      roomPrefix,
       customerName: updatedTicket.customerName,
       priorityName: targetItem.priority.name,
     },
@@ -769,8 +904,8 @@ export async function callSpecificTicket(params: {
   console.log('[Chamada Painel] Chamada avulsa:', {
     ticket: updatedTicket.formattedTicket,
     mesa: `${location?.name} ${location?.number}`,
-    andar: effectiveFloorName,
-    sala: effectiveRoomName,
+    andar: effectiveLocation.floorName,
+    sala: locCascade.roomFormatted || effectiveLocation.roomName,
     textoVoz: speech.plainText,
   })
 
@@ -783,8 +918,9 @@ export async function callSpecificTicket(params: {
       locationName: locCascade.formatted,
       locationPlace: locCascade.place,
       locationShort: locCascade.short,
-      floorName: effectiveFloorName,
-      roomName: effectiveRoomName,
+      floorName: effectiveLocation.floorName,
+      roomName: locCascade.roomFormatted || effectiveLocation.roomName,
+      roomNumber: effectiveLocation.roomNumber,
     },
     speech,
   }
@@ -809,6 +945,7 @@ export async function recallTicket(ticketId: string, unitId: string) {
       priority: priorities,
       location: locations,
       roomName: rooms.name,
+      roomNumber: rooms.number,
       floorName: floors.name,
     })
     .from(tickets)
@@ -829,10 +966,26 @@ export async function recallTicket(ticketId: string, unitId: string) {
     .limit(1)
 
   const speechConfig = (unitRecord?.metadata as any)?.speechConfig
-  const { roomName: effectiveRoomName, floorName: effectiveFloorName } =
-    await resolveEffectiveRoomAndFloor(item.roomName, item.floorName, item.service?.roomId)
+  const roomPrefix = speechConfig?.roomPrefix
+  const effectiveLocation = await resolveEffectiveRoomAndFloor({
+    locationRoomId: item.location?.roomId,
+    locationRoomName: item.roomName,
+    locationRoomNumber: item.roomNumber,
+    locationFloorName: item.floorName,
+    serviceRoomId: item.service?.roomId,
+    serviceUserId: item.service?.userId,
+    callingUserId: item.ticket?.userId,
+    unitId,
+  })
 
-  const locCascade = formatLocationCascade(effectiveFloorName, effectiveRoomName, item.location?.name, item.location?.number)
+  const locCascade = formatLocationCascade(
+    effectiveLocation.floorName,
+    effectiveLocation.roomName,
+    effectiveLocation.roomNumber,
+    item.location?.name,
+    item.location?.number,
+    roomPrefix
+  )
 
   const speech = buildTicketAnnouncement(
     {
@@ -841,8 +994,10 @@ export async function recallTicket(ticketId: string, unitId: string) {
       formattedTicket: item.ticket.formattedTicket,
       locationName: item.location?.name,
       locationNumber: item.location?.number,
-      floorName: effectiveFloorName,
-      roomName: effectiveRoomName,
+      floorName: effectiveLocation.floorName,
+      roomName: effectiveLocation.roomName,
+      roomNumber: effectiveLocation.roomNumber,
+      roomPrefix,
       customerName: item.ticket.customerName,
       priorityName: item.priority.name,
     },
@@ -852,8 +1007,8 @@ export async function recallTicket(ticketId: string, unitId: string) {
   console.log('[Chamada Painel] Rechamar senha:', {
     ticket: item.ticket.formattedTicket,
     mesa: `${item.location?.name} ${item.location?.number}`,
-    andar: effectiveFloorName,
-    sala: effectiveRoomName,
+    andar: effectiveLocation.floorName,
+    sala: locCascade.roomFormatted || effectiveLocation.roomName,
     textoVoz: speech.plainText,
   })
 
@@ -866,8 +1021,9 @@ export async function recallTicket(ticketId: string, unitId: string) {
       locationName: locCascade.formatted,
       locationPlace: locCascade.place,
       locationShort: locCascade.short,
-      floorName: effectiveFloorName,
-      roomName: effectiveRoomName,
+      floorName: effectiveLocation.floorName,
+      roomName: locCascade.roomFormatted || effectiveLocation.roomName,
+      roomNumber: effectiveLocation.roomNumber,
     },
     speech,
   }
@@ -1085,6 +1241,7 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
     .select({
       roomId: rooms.id,
       roomName: rooms.name,
+      roomNumber: rooms.number,
       floorName: floors.name,
     })
     .from(rooms)
@@ -1092,6 +1249,21 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
     .where(eq(rooms.unitId, unitId))
 
   const roomMap = new Map(unitRoomsWithFloors.map((r) => [r.roomId, r]))
+
+  // 1.2.1 Mapa de lotação dos atendentes da unidade
+  const unitLocationsWithAttendants = await db
+    .select({
+      currentUserId: locations.currentUserId,
+      roomId: locations.roomId,
+    })
+    .from(locations)
+    .where(and(eq(locations.unitId, unitId), eq(locations.active, true), isNotNull(locations.currentUserId)))
+
+  const attendantRoomMap = new Map(
+    unitLocationsWithAttendants
+      .filter((l) => l.currentUserId && l.roomId)
+      .map((l) => [l.currentUserId!, roomMap.get(l.roomId!)])
+  )
 
   const validServiceIds = Array.isArray(serviceIds) && serviceIds.length > 0 ? serviceIds : null
 
@@ -1193,6 +1365,8 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
       id: tickets.id,
       serviceId: tickets.serviceId,
       serviceRoomId: services.roomId,
+      serviceUserId: services.userId,
+      ticketUserId: tickets.userId,
       ticketPrefix: tickets.ticketPrefix,
       ticketNumber: tickets.ticketNumber,
       formattedTicket: tickets.formattedTicket,
@@ -1205,6 +1379,7 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
       locationName: locations.name,
       locationNumber: locations.number,
       roomName: rooms.name,
+      roomNumber: rooms.number,
       floorName: floors.name,
     })
     .from(tickets)
@@ -1232,6 +1407,8 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
       id: ticketsHistory.id,
       serviceId: ticketsHistory.serviceId,
       serviceRoomId: services.roomId,
+      serviceUserId: services.userId,
+      ticketUserId: ticketsHistory.userId,
       ticketPrefix: ticketsHistory.ticketPrefix,
       ticketNumber: ticketsHistory.ticketNumber,
       formattedTicket: ticketsHistory.formattedTicket,
@@ -1244,6 +1421,7 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
       locationName: locations.name,
       locationNumber: locations.number,
       roomName: rooms.name,
+      roomNumber: rooms.number,
       floorName: floors.name,
     })
     .from(ticketsHistory)
@@ -1278,6 +1456,8 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
     seenKeys.add(current.formattedTicket)
   }
 
+  const roomPrefix = (unit.metadata as any)?.speechConfig?.roomPrefix
+
   const history = rawHistoryCandidates
     .filter((t) => {
       if (seenKeys.has(t.id) || seenKeys.has(t.formattedTicket)) {
@@ -1289,29 +1469,53 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
     })
     .slice(0, 8)
     .map((t) => {
-      const fallbackRoom = t.serviceRoomId ? roomMap.get(t.serviceRoomId) : null
+      const fallbackRoom =
+        (t.serviceUserId ? attendantRoomMap.get(t.serviceUserId) : null) ||
+        (t.ticketUserId ? attendantRoomMap.get(t.ticketUserId) : null) ||
+        (t.serviceRoomId ? roomMap.get(t.serviceRoomId) : null)
       const effectiveRoomName = t.roomName || fallbackRoom?.roomName || null
+      const effectiveRoomNumber = t.roomNumber || fallbackRoom?.roomNumber || null
       const effectiveFloorName = t.floorName || fallbackRoom?.floorName || null
-      const locCascade = formatLocationCascade(effectiveFloorName, effectiveRoomName, t.locationName, t.locationNumber)
+      const locCascade = formatLocationCascade(
+        effectiveFloorName,
+        effectiveRoomName,
+        effectiveRoomNumber,
+        t.locationName,
+        t.locationNumber,
+        roomPrefix
+      )
       return {
         ...t,
         locationFormatted: locCascade.formatted,
         locationPlace: locCascade.place,
         locationShort: locCascade.short,
         floorName: effectiveFloorName,
-        roomName: effectiveRoomName,
+        roomName: locCascade.roomFormatted || effectiveRoomName,
+        roomNumber: effectiveRoomNumber,
       }
     })
 
   let currentLocCascade = null
   let currentEffectiveRoom = null
+  let currentEffectiveRoomNumber = null
   let currentEffectiveFloor = null
 
   if (current) {
-    const fallbackRoom = current.serviceRoomId ? roomMap.get(current.serviceRoomId) : null
+    const fallbackRoom =
+      (current.serviceUserId ? attendantRoomMap.get(current.serviceUserId) : null) ||
+      (current.ticketUserId ? attendantRoomMap.get(current.ticketUserId) : null) ||
+      (current.serviceRoomId ? roomMap.get(current.serviceRoomId) : null)
     currentEffectiveRoom = current.roomName || fallbackRoom?.roomName || null
+    currentEffectiveRoomNumber = current.roomNumber || fallbackRoom?.roomNumber || null
     currentEffectiveFloor = current.floorName || fallbackRoom?.floorName || null
-    currentLocCascade = formatLocationCascade(currentEffectiveFloor, currentEffectiveRoom, current.locationName, current.locationNumber)
+    currentLocCascade = formatLocationCascade(
+      currentEffectiveFloor,
+      currentEffectiveRoom,
+      currentEffectiveRoomNumber,
+      current.locationName,
+      current.locationNumber,
+      roomPrefix
+    )
   }
 
   return {
@@ -1334,7 +1538,8 @@ export async function getPanelInitialData(unitId: string, serviceIds?: string[])
           locationPlace: currentLocCascade!.place,
           locationShort: currentLocCascade!.short,
           floorName: currentEffectiveFloor,
-          roomName: currentEffectiveRoom,
+          roomName: currentLocCascade!.roomFormatted || currentEffectiveRoom,
+          roomNumber: currentEffectiveRoomNumber,
         }
       : null,
     history,

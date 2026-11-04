@@ -239,6 +239,14 @@ export async function updateLocation(locationId: string, data: {
       .where(eq(locations.id, locationId))
       .returning()
 
+    // Se o guichê possui atendente vinculado e sala, sincroniza os serviços desse atendente
+    if (updated && updated.currentUserId && updated.roomId) {
+      await db
+        .update(services)
+        .set({ roomId: updated.roomId })
+        .where(eq(services.userId, updated.currentUserId))
+    }
+
     return updated
   } catch (err: any) {
     if (err?.code === '23505') {
@@ -383,18 +391,23 @@ export async function getUnitSpeechConfig(unitId: string) {
     .limit(1)
 
   const meta = (unit?.metadata as any) || {}
-  return (
-    meta.speechConfig || {
-      voice: 'pt-BR-FranciscaNeural',
-      rate: '+0%',
-      pitch: '+0Hz',
-      callPrefix: 'Senha',
-      callSuffix: 'Favor comparecer',
-      pauseDuration: '300ms',
-      includeCustomerName: true,
-      lgpdMode: false,
-    }
-  )
+  const cfg = meta.speechConfig || {}
+  const DEFAULT_PREFIXES = ['Sala', 'Ambulatório', 'Consultório', 'Box', 'Guichê', 'Módulo']
+
+  return {
+    voice: cfg.voice || 'pt-BR-FranciscaNeural',
+    rate: cfg.rate || '+0%',
+    pitch: cfg.pitch || '+0Hz',
+    callPrefix: cfg.callPrefix || 'Senha',
+    callSuffix: cfg.callSuffix || 'Favor comparecer',
+    pauseDuration: cfg.pauseDuration || '300ms',
+    includeCustomerName: cfg.includeCustomerName ?? true,
+    lgpdMode: cfg.lgpdMode ?? false,
+    roomPrefix: cfg.roomPrefix ?? '',
+    customRoomPrefixes: Array.isArray(cfg.customRoomPrefixes) && cfg.customRoomPrefixes.length > 0
+      ? cfg.customRoomPrefixes
+      : DEFAULT_PREFIXES,
+  }
 }
 
 export async function saveUnitSpeechConfig(unitId: string, speechConfig: any) {
@@ -612,6 +625,7 @@ export async function getServicesByUnit(unitId: string) {
         roomId: locations.roomId,
         currentUserId: locations.currentUserId,
         roomName: rooms.name,
+        roomNumber: rooms.number,
       })
       .from(locations)
       .leftJoin(rooms, eq(locations.roomId, rooms.id))
@@ -622,6 +636,7 @@ export async function getServicesByUnit(unitId: string) {
   return serviceList.map((s) => {
     let attendantLocationText: string | null = null
     let effectiveRoomName = s.roomName || null
+    let effectiveRoomNumber = s.roomNumber || null
 
     if (s.userId) {
       const loc = unitLocations.find((l) => l.currentUserId === s.userId)
@@ -629,6 +644,7 @@ export async function getServicesByUnit(unitId: string) {
         attendantLocationText = `${loc.name} ${loc.number.toString().padStart(2, '0')}`
         if (!effectiveRoomName && loc.roomName) {
           effectiveRoomName = loc.roomName
+          effectiveRoomNumber = loc.roomNumber || null
         }
       }
     }
@@ -636,6 +652,7 @@ export async function getServicesByUnit(unitId: string) {
     return {
       ...s,
       roomName: effectiveRoomName,
+      roomNumber: effectiveRoomNumber,
       attendantLocationText,
     }
   })
