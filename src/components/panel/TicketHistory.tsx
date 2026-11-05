@@ -172,8 +172,8 @@ export function TicketHistory({
 
                     {cascade && (
                       <span
-                        className={`text-[11px] font-bold block truncate mt-1 ${
-                          isLight ? 'text-slate-700' : 'text-slate-300'
+                        className={`text-xs font-bold block truncate mt-1 ${
+                          isLight ? 'text-purple-800' : 'text-purple-300'
                         }`}
                       >
                         {cascade}
@@ -282,37 +282,41 @@ export function TicketHistory({
               const { place: prevPlace, cascade: prevCascade } = parseLocation(previousTicket)
               return (
                 <div
-                  className={`rounded-2xl p-4 border flex items-center justify-between z-10 ${
+                  className={`rounded-2xl p-4 border-2 flex items-center justify-between gap-3 z-10 transition-colors ${
                     isLight
-                      ? 'bg-slate-50 border-slate-200/90 text-slate-900 shadow-xs'
-                      : 'bg-slate-900/90 border-slate-700/80 text-white'
+                      ? 'bg-cyan-50/70 border-cyan-300/80 text-slate-900 shadow-xs'
+                      : 'bg-slate-900/90 border-cyan-500/40 text-white shadow-md'
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5">
+                  <div className="flex items-center space-x-3 min-w-0">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        isLight ? 'bg-cyan-100 text-cyan-700' : 'bg-cyan-500/20 text-cyan-400'
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${
+                        isLight
+                          ? 'bg-cyan-600 text-white border-cyan-700 shadow-2xs'
+                          : 'bg-cyan-600/30 text-cyan-300 border-cyan-500/50'
                       }`}
                     >
-                      <MapPin className="w-5 h-5" />
+                      <MapPin className="w-6 h-6" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span
-                        className={`text-[10px] font-bold uppercase tracking-wider block ${
-                          isLight ? 'text-slate-400' : 'text-slate-400'
+                        className={`text-[10px] font-black uppercase tracking-wider block ${
+                          isLight ? 'text-cyan-800' : 'text-cyan-300'
                         }`}
                       >
-                        Local
+                        LOCAL DO ATENDIMENTO
                       </span>
-                      <span className="text-base font-black">
-                        {prevCascade || previousTicket.locationFormatted}
+                      <span className="text-base sm:text-lg font-black truncate block">
+                        {prevCascade ? `${prevCascade} • ${prevPlace}` : (prevPlace || previousTicket.locationFormatted)}
                       </span>
                     </div>
                   </div>
 
                   <span
-                    className={`text-2xl font-mono font-black ${
-                      isLight ? 'text-cyan-600' : 'text-cyan-400'
+                    className={`text-2xl sm:text-3xl font-mono font-black shrink-0 px-3 py-1 rounded-xl border ${
+                      isLight
+                        ? 'bg-white border-cyan-300 text-cyan-950 shadow-2xs'
+                        : 'bg-slate-800 border-cyan-500/50 text-cyan-300'
                     }`}
                   >
                     {prevPlace}
@@ -403,8 +407,8 @@ export function TicketHistory({
 
                     {cascade && (
                       <span
-                        className={`text-[9px] font-bold block truncate mt-0.5 ${
-                          isLight ? 'text-slate-600' : 'text-slate-400'
+                        className={`text-[10px] font-bold block truncate mt-0.5 ${
+                          isLight ? 'text-purple-800' : 'text-purple-300'
                         }`}
                       >
                         {cascade}
@@ -523,8 +527,8 @@ export function TicketHistory({
 
                     {cascade && (
                       <span
-                        className={`text-[11px] font-bold block truncate mt-0.5 leading-tight ${
-                          isLight ? 'text-slate-700' : 'text-slate-300'
+                        className={`text-xs font-bold block truncate mt-0.5 leading-tight ${
+                          isLight ? 'text-purple-800' : 'text-purple-300'
                         }`}
                       >
                         {cascade}

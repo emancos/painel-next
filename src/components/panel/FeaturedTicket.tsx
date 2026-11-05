@@ -178,7 +178,7 @@ export function FeaturedTicket({
         </div>
 
         {/* Miolo Central: Número Gigante da Senha com Aura */}
-        <div className={`text-center z-10 ${isWidescreen || isCompact ? 'my-4 lg:my-6' : 'my-8 lg:my-12'}`}>
+        <div className={`text-center z-10 ${isWidescreen || isCompact ? 'my-3 lg:my-4' : 'my-5 lg:my-8'}`}>
           <div className="inline-flex items-center space-x-2 mb-2 px-3 py-1 rounded-full text-xs md:text-sm font-black tracking-widest uppercase border border-current opacity-75">
             <span className={`w-2 h-2 rounded-full animate-ping ${isLight ? 'bg-cyan-600' : 'bg-cyan-400'}`} />
             <span className={accentText}>Senha Chamada</span>
@@ -204,82 +204,256 @@ export function FeaturedTicket({
           </div>
         </div>
 
-        {/* Rodapé: Local e Destino (Guichê / Sala) com Tile em Destaque */}
-        <div
-          className={`z-10 rounded-2xl p-5 md:p-6 border flex items-center justify-between backdrop-blur-md transition-colors ${
-            isLight
-              ? 'bg-white/95 border-slate-300/80 text-slate-900 shadow-md'
-              : 'bg-slate-900/90 border-slate-700/80 text-white shadow-xl'
-          }`}
-        >
-          <div className="flex items-center space-x-4">
+        {/* DESTINO / LOCAL DE ATENDIMENTO - SUPER DESTAQUE VISUAL PARA ACESSIBILIDADE DE PESSOAS SURDAS */}
+        {(() => {
+          // Extração inteligente de andar, sala, guichê/posto e número
+          const parts = (ticket.locationFormatted || '')
+            .split('•')
+            .map((s) => s.trim())
+            .filter(Boolean)
+
+          const floor = ticket.floorName || (parts.length >= 3 ? parts[0] : null)
+
+          let room = ticket.roomName
+            ? (ticket.roomNumber && !ticket.roomName.includes(ticket.roomNumber)
+                ? `${ticket.roomName} ${ticket.roomNumber}`
+                : ticket.roomName)
+            : (ticket.roomNumber ? `Sala ${ticket.roomNumber}` : null)
+
+          if (!room && parts.length >= 2) {
+            room = parts.length >= 3 ? parts[1] : (parts[0] !== ticket.locationPlace ? parts[0] : null)
+          }
+
+          const place = ticket.locationPlace || (parts.length > 0 ? parts[parts.length - 1] : ticket.locationFormatted)
+          const shortNumber = ticket.locationShort || (place ? place.replace(/\D/g, '') : '')
+
+          const hasDistinctRoom = Boolean(room && (!place || room.toLowerCase() !== place.toLowerCase()))
+          const hasDistinctPlace = Boolean(place && (!room || place.toLowerCase() !== room.toLowerCase()))
+
+          return (
             <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-xs ${
-                isLight
-                  ? 'bg-cyan-100/80 border-cyan-200 text-cyan-700'
-                  : 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
+              className={`z-10 rounded-3xl p-5 sm:p-6 md:p-7 border-2 transition-all duration-500 relative overflow-hidden backdrop-blur-xl shadow-2xl ${
+                isFlashing
+                  ? isLight
+                    ? 'bg-gradient-to-br from-white via-emerald-50/90 to-cyan-50/80 border-emerald-500 ring-4 ring-emerald-400/40 shadow-[0_0_50px_rgba(16,185,129,0.35)]'
+                    : 'bg-gradient-to-br from-[#0c221a] via-[#091522] to-[#070b14] border-emerald-400 ring-4 ring-emerald-400/40 shadow-[0_0_60px_rgba(52,211,153,0.45)]'
+                  : isLight
+                  ? 'bg-white/95 border-cyan-400/80 shadow-[0_15px_40px_rgba(6,182,212,0.12)]'
+                  : 'bg-[#0d1627]/95 border-cyan-500/50 shadow-[0_15px_45px_rgba(6,182,212,0.22)]'
               }`}
             >
-              <MapPin className="w-7 h-7" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                <span
-                  className={`text-xs font-bold uppercase tracking-wider ${
-                    isLight ? 'text-slate-500' : 'text-slate-400'
+              {/* Faixa Superior: Indicador Direcional e Andar */}
+              <div
+                className={`flex items-center justify-between pb-3.5 mb-3.5 border-b flex-wrap gap-2.5 ${
+                  isLight ? 'border-slate-200/90' : 'border-slate-700/60'
+                }`}
+              >
+                <div className="flex items-center space-x-2.5">
+                  <span className="relative flex h-3.5 w-3.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+                  </span>
+                  <span
+                    className={`text-xs md:text-sm font-black tracking-widest uppercase ${
+                      isLight ? 'text-cyan-900' : 'text-cyan-300'
+                    }`}
+                  >
+                    DIRIJA-SE AO LOCAL DE ATENDIMENTO
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-2 flex-wrap gap-1.5">
+                  {isFlashing && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500 text-white shadow-md animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                      <span>Chamando Agora</span>
+                    </span>
+                  )}
+
+                  {floor && (
+                    <div
+                      className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-xl text-xs md:text-sm font-black border shadow-xs ${
+                        isLight
+                          ? 'bg-sky-100 text-sky-950 border-sky-300'
+                          : 'bg-sky-500/25 text-sky-200 border-sky-400/40'
+                      }`}
+                    >
+                      <Building2 className={`w-4 h-4 shrink-0 ${isLight ? 'text-sky-700' : 'text-sky-300'}`} />
+                      <span>{floor}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Blocos de Destino: Sala e Guichê/Mesa */}
+              {hasDistinctRoom && hasDistinctPlace ? (
+                /* Cenário 1: Tanto Sala/Ambulatório quanto Guichê/Mesa existem - Exibição Dupla em Alto Destaque */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-4 items-stretch">
+                  {/* Card da Sala / Consultório */}
+                  <div
+                    className={`rounded-2xl p-4 sm:p-5 border-2 flex items-center justify-between gap-3 transition-all ${
+                      isLight
+                        ? 'bg-gradient-to-br from-purple-50 via-indigo-50/60 to-purple-100/70 border-purple-300 text-purple-950 shadow-sm'
+                        : 'bg-gradient-to-br from-purple-950/70 via-[#130f28] to-slate-900 border-purple-500/60 text-white shadow-lg'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3.5 sm:space-x-4 min-w-0">
+                      <div
+                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 border-2 shadow-md ${
+                          isLight
+                            ? 'bg-purple-600 text-white border-purple-700'
+                            : 'bg-purple-600/40 text-purple-200 border-purple-400/60 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
+                        }`}
+                      >
+                        <DoorOpen className="w-8 h-8 sm:w-9 sm:h-9" />
+                      </div>
+                      <div className="min-w-0">
+                        <span
+                          className={`text-[11px] sm:text-xs font-black uppercase tracking-widest block mb-0.5 ${
+                            isLight ? 'text-purple-800' : 'text-purple-300'
+                          }`}
+                        >
+                          SALA / CONSULTÓRIO
+                        </span>
+                        <span
+                          className={`block text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-tight truncate ${
+                            isLight ? 'text-purple-950' : 'text-white'
+                          }`}
+                          title={room || ''}
+                        >
+                          {room}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card do Posto / Guichê */}
+                  <div
+                    className={`rounded-2xl p-4 sm:p-5 border-2 flex items-center justify-between gap-3 transition-all ${
+                      isLight
+                        ? 'bg-gradient-to-br from-cyan-50 via-sky-50/60 to-cyan-100/70 border-cyan-300 text-cyan-950 shadow-sm'
+                        : 'bg-gradient-to-br from-cyan-950/70 via-[#0a1829] to-slate-900 border-cyan-500/60 text-white shadow-lg'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3.5 sm:space-x-4 min-w-0">
+                      <div
+                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 border-2 shadow-md ${
+                          isLight
+                            ? 'bg-cyan-600 text-white border-cyan-700'
+                            : 'bg-cyan-600/40 text-cyan-200 border-cyan-400/60 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                        }`}
+                      >
+                        <MapPin className="w-8 h-8 sm:w-9 sm:h-9" />
+                      </div>
+                      <div className="min-w-0">
+                        <span
+                          className={`text-[11px] sm:text-xs font-black uppercase tracking-widest block mb-0.5 ${
+                            isLight ? 'text-cyan-800' : 'text-cyan-300'
+                          }`}
+                        >
+                          POSTO / GUICHÊ
+                        </span>
+                        <span
+                          className={`block text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-tight truncate ${
+                            isLight ? 'text-cyan-950' : 'text-white'
+                          }`}
+                          title={place || ''}
+                        >
+                          {place}
+                        </span>
+                      </div>
+                    </div>
+
+                    {shortNumber && (
+                      <div
+                        className={`px-3.5 sm:px-5 py-2 rounded-2xl border-2 flex items-center justify-center shrink-0 font-mono font-black ${
+                          isLight
+                            ? 'bg-white border-cyan-400 text-cyan-950 shadow-md'
+                            : 'bg-slate-900/90 border-cyan-400/80 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.35)]'
+                        }`}
+                      >
+                        <span className="text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-none">
+                          {shortNumber}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Cenário 2: Apenas um local principal (ou Sala ou Guichê único) - Exibição Unificada em Tamanho Gigante */
+                <div
+                  className={`rounded-2xl p-4 sm:p-6 md:p-7 border-2 flex items-center justify-between gap-4 transition-all ${
+                    room
+                      ? isLight
+                        ? 'bg-gradient-to-br from-purple-50 via-indigo-50/50 to-purple-100/60 border-purple-300 text-purple-950 shadow-md'
+                        : 'bg-gradient-to-br from-purple-950/70 via-[#130f28] to-slate-900 border-purple-500/60 text-white shadow-xl'
+                      : isLight
+                      ? 'bg-gradient-to-br from-cyan-50 via-sky-50/50 to-cyan-100/60 border-cyan-300 text-cyan-950 shadow-md'
+                      : 'bg-gradient-to-br from-cyan-950/70 via-[#0a1829] to-slate-900 border-cyan-500/60 text-white shadow-xl'
                   }`}
                 >
-                  Local de Atendimento
-                </span>
-                {ticket.floorName && (
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-extrabold transition-all shadow-xs ${
-                      isLight
-                        ? 'bg-sky-50 text-sky-950 border border-sky-300'
-                        : 'bg-sky-500/20 text-sky-200 border border-sky-500/35'
-                    }`}
-                  >
-                    <Building2 className={`w-3.5 h-3.5 shrink-0 ${isLight ? 'text-sky-700' : 'text-sky-400'}`} />
-                    <span>{ticket.floorName}</span>
-                  </span>
-                )}
-                {ticket.roomName && (
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-extrabold transition-all shadow-xs ${
-                      isLight
-                        ? 'bg-purple-50 text-purple-950 border border-purple-300'
-                        : 'bg-purple-500/20 text-purple-200 border border-purple-500/35'
-                    }`}
-                  >
-                    <DoorOpen className={`w-3.5 h-3.5 shrink-0 ${isLight ? 'text-purple-700' : 'text-purple-400'}`} />
-                    <span>
-                      {ticket.roomName}
-                      {ticket.roomNumber && !ticket.roomName.includes(ticket.roomNumber)
-                        ? ` ${ticket.roomNumber}`
-                        : ''}
-                    </span>
-                  </span>
-                )}
-              </div>
-              <span className={`text-2xl md:text-3xl font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                {ticket.locationPlace || ticket.locationFormatted}
-              </span>
-            </div>
-          </div>
+                  <div className="flex items-center space-x-4 sm:space-x-6 min-w-0">
+                    <div
+                      className={`w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl flex items-center justify-center shrink-0 border-2 shadow-lg ${
+                        room
+                          ? isLight
+                            ? 'bg-purple-600 text-white border-purple-700'
+                            : 'bg-purple-600/40 text-purple-200 border-purple-400 shadow-[0_0_25px_rgba(168,85,247,0.35)]'
+                          : isLight
+                          ? 'bg-cyan-600 text-white border-cyan-700'
+                          : 'bg-cyan-600/40 text-cyan-200 border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.35)]'
+                      }`}
+                    >
+                      {room ? (
+                        <DoorOpen className="w-8 h-8 sm:w-11 sm:h-11" />
+                      ) : (
+                        <MapPin className="w-8 h-8 sm:w-11 sm:h-11" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <span
+                        className={`text-xs sm:text-sm font-black uppercase tracking-widest block mb-1 ${
+                          room
+                            ? isLight ? 'text-purple-800' : 'text-purple-300'
+                            : isLight ? 'text-cyan-800' : 'text-cyan-300'
+                        }`}
+                      >
+                        {room ? 'SALA / CONSULTÓRIO DE ATENDIMENTO' : 'POSTO / GUICHÊ DE ATENDIMENTO'}
+                      </span>
+                      <span
+                        className={`block text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-tight truncate ${
+                          room
+                            ? isLight ? 'text-purple-950' : 'text-white'
+                            : isLight ? 'text-cyan-950' : 'text-white'
+                        }`}
+                      >
+                        {room || place}
+                      </span>
+                    </div>
+                  </div>
 
-          {/* Badge Numérico em Destaque */}
-          <div
-            className={`px-6 py-2.5 rounded-2xl border flex items-center space-x-2 font-mono font-black ${
-              isLight
-                ? 'bg-cyan-50 border-cyan-300 text-cyan-900 shadow-xs'
-                : 'bg-cyan-950/50 border-cyan-500/50 text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.3)]'
-            }`}
-          >
-            <span className="text-4xl md:text-6xl tracking-tight leading-none">
-              {ticket.locationShort}
-            </span>
-          </div>
-        </div>
+                  {shortNumber && (
+                    <div
+                      className={`px-4 sm:px-7 py-2.5 rounded-2xl sm:rounded-3xl border-2 flex items-center justify-center shrink-0 font-mono font-black ${
+                        room
+                          ? isLight
+                            ? 'bg-white border-purple-400 text-purple-950 shadow-md'
+                            : 'bg-slate-900/90 border-purple-400/80 text-purple-200 shadow-[0_0_25px_rgba(168,85,247,0.35)]'
+                          : isLight
+                          ? 'bg-white border-cyan-400 text-cyan-950 shadow-md'
+                          : 'bg-slate-900/90 border-cyan-400/80 text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.35)]'
+                      }`}
+                    >
+                      <span className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight leading-none">
+                        {shortNumber}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })()}
       </motion.div>
     </AnimatePresence>
   )
