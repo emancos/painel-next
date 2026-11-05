@@ -89,26 +89,26 @@ export function TicketHistory({
   if (isWidescreen) {
     return (
       <div
-        className={`w-full flex flex-col rounded-3xl p-5 border transition-all duration-300 ${
+        className={`w-full flex flex-col rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border transition-all duration-300 ${
           isLight
             ? 'bg-white/95 border-2 border-slate-200/90 shadow-md text-slate-800'
             : 'bg-[#0c1322]/90 border border-slate-800 text-slate-200 backdrop-blur-xl'
         }`}
       >
         <div
-          className={`flex items-center space-x-2 pb-3 mb-3 border-b ${
+          className={`flex items-center space-x-2 pb-2.5 sm:pb-3 mb-2.5 sm:mb-3 border-b ${
             isLight ? 'border-slate-200/80 text-slate-800' : 'border-slate-800 text-slate-200'
           }`}
         >
           <div className={`p-1.5 rounded-lg ${isLight ? 'bg-cyan-50 text-cyan-600' : 'bg-cyan-500/20 text-cyan-400'}`}>
             <History className="w-4 h-4" />
           </div>
-          <h3 className="text-sm font-black uppercase tracking-wider">
+          <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider">
             Últimas Senhas Chamadas
           </h3>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-2 sm:gap-3">
           <AnimatePresence initial={false}>
             {history.length === 0 ? (
               <div
@@ -427,7 +427,7 @@ export function TicketHistory({
   // Layout Classic (coluna lateral)
   return (
     <div
-      className={`w-full lg:w-80 xl:w-96 flex flex-col rounded-3xl p-5 sm:p-6 border transition-all duration-300 ${
+      className={`w-full lg:w-80 xl:w-96 flex flex-col rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 lg:p-6 border transition-all duration-300 ${
         isLight
           ? 'bg-white/95 border-2 border-slate-200/90 shadow-md text-slate-800'
           : 'bg-[#0c1322]/90 border border-slate-800 text-slate-200 backdrop-blur-xl'

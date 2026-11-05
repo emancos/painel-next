@@ -58,17 +58,17 @@ export function DigitalClock({
   const formattedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1)
 
   return (
-    <div className="flex flex-col items-end">
-      <div className={`flex items-baseline space-x-1 font-mono text-3xl md:text-4xl lg:text-5xl font-black tracking-tight ${
+    <div className="flex flex-col items-end shrink-0">
+      <div className={`flex items-baseline space-x-0.5 sm:space-x-1 font-mono text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight leading-none ${
         isLight ? 'text-slate-900' : 'text-white drop-shadow-[0_0_15px_rgba(34,211,238,0.3)]'
       }`}>
         <span className={isLight ? 'text-cyan-600' : 'text-cyan-400'}>{hours}</span>
         <span className={`${isLight ? 'text-slate-400' : 'text-slate-500'} animate-pulse`}>:</span>
         <span className={isLight ? 'text-cyan-600' : 'text-cyan-400'}>{minutes}</span>
         <span className={`${isLight ? 'text-slate-400' : 'text-slate-500'} animate-pulse`}>:</span>
-        <span className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-2xl md:text-3xl`}>{seconds}</span>
+        <span className={`${isLight ? 'text-slate-500' : 'text-slate-400'} text-lg sm:text-xl md:text-2xl lg:text-3xl`}>{seconds}</span>
       </div>
-      <span className={`text-xs md:text-sm font-medium tracking-wide capitalize mt-0.5 ${
+      <span className={`text-[10px] sm:text-xs md:text-sm font-medium tracking-wide capitalize mt-1 truncate max-w-[140px] sm:max-w-none ${
         isLight ? 'text-slate-600' : 'text-slate-400'
       }`}>
         {formattedDate}
