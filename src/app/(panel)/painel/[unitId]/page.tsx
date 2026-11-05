@@ -103,24 +103,102 @@ export default function TVPanelPage({ params }: PanelPageProps) {
     speechManager.playChime()
   }
 
-  // Alternar tela cheia da TV
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {})
-    } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {})
-    }
-  }
+  // Verificador robusto de tela cheia (HTML5 Fullscreen API, display-mode ou dimensão nativa F11)
+  const checkIsFullscreen = useCallback(() => {
+    if (typeof window === 'undefined') return false
+    const hasFsElement = Boolean(
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement ||
+      (document as any).mozFullScreenElement ||
+      (document as any).msFullscreenElement
+    )
+    const isDisplayModeFs = Boolean(
+      window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches
+    )
+    const isWindowFs =
+      Math.abs(window.innerHeight - window.screen.height) <= 10 &&
+      Math.abs(window.innerWidth - window.screen.width) <= 10
 
-  // Monitora alterações de tela cheia (tanto pelo botão quanto por tecla F11 do teclado)
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement))
-    }
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    return hasFsElement || isDisplayModeFs || isWindowFs
   }, [])
+
+  // Alternar tela cheia da TV (suporta tanto clique no botão quanto tecla F11)
+  const toggleFullscreen = useCallback(() => {
+    const isCurrentlyFs = checkIsFullscreen()
+
+    if (!isCurrentlyFs) {
+      const docEl = document.documentElement as any
+      const requestFs =
+        docEl.requestFullscreen ||
+        docEl.webkitRequestFullscreen ||
+        docEl.mozRequestFullScreen ||
+        docEl.msRequestFullscreen
+      if (requestFs) {
+        requestFs
+          .call(docEl)
+          .then(() => setIsFullscreen(true))
+          .catch(() => setIsFullscreen(true))
+      } else {
+        setIsFullscreen(true)
+      }
+    } else {
+      const doc = document as any
+      const exitFs =
+        doc.exitFullscreen ||
+        doc.webkitExitFullscreen ||
+        doc.mozCancelFullScreen ||
+        doc.msExitFullscreen
+      if (document.fullscreenElement && exitFs) {
+        exitFs
+          .call(doc)
+          .then(() => setIsFullscreen(false))
+          .catch(() => setIsFullscreen(false))
+      } else {
+        setIsFullscreen(false)
+      }
+    }
+  }, [checkIsFullscreen])
+
+  // Monitora alterações de tela cheia (botão, tecla F11 do teclado, resize e display-mode)
+  useEffect(() => {
+    const updateFullscreenState = () => {
+      setIsFullscreen(checkIsFullscreen())
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F11') {
+        e.preventDefault()
+        toggleFullscreen()
+      }
+    }
+
+    // Checagem inicial
+    updateFullscreenState()
+
+    window.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('fullscreenchange', updateFullscreenState)
+    document.addEventListener('webkitfullscreenchange', updateFullscreenState)
+    document.addEventListener('mozfullscreenchange', updateFullscreenState)
+    document.addEventListener('MSFullscreenChange', updateFullscreenState)
+    window.addEventListener('resize', updateFullscreenState)
+
+    const mql = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(display-mode: fullscreen)') : null
+    if (mql && mql.addEventListener) {
+      mql.addEventListener('change', updateFullscreenState)
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('fullscreenchange', updateFullscreenState)
+      document.removeEventListener('webkitfullscreenchange', updateFullscreenState)
+      document.removeEventListener('mozfullscreenchange', updateFullscreenState)
+      document.removeEventListener('MSFullscreenChange', updateFullscreenState)
+      window.removeEventListener('resize', updateFullscreenState)
+      if (mql && mql.removeEventListener) {
+        mql.removeEventListener('change', updateFullscreenState)
+      }
+    }
+  }, [checkIsFullscreen, toggleFullscreen])
 
   // Carrega dados iniciais da unidade e histórico filtrado
   const loadPanelData = useCallback(async (filterIds: string[]) => {
