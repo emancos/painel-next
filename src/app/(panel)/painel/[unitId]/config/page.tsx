@@ -19,6 +19,9 @@ import {
   Filter,
   Sparkles,
   Info,
+  Type,
+  DoorOpen,
+  MapPin,
 } from 'lucide-react'
 
 interface ServiceOption {
@@ -39,6 +42,7 @@ export default function PanelConfigPage({ params }: PageProps) {
   // Estado das configurações
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [layout, setLayout] = useState<'classic' | 'widescreen' | 'compact'>('classic')
+  const [locationTextSize, setLocationTextSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('md')
   const [filterMode, setFilterMode] = useState<'ALL' | 'SPECIFIC'>('ALL')
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
 
@@ -70,7 +74,15 @@ export default function PanelConfigPage({ params }: PageProps) {
       setLayout('classic')
     }
 
-    // 3. Serviços / Setores
+    // 3. Tamanho dos textos do local (padrão: md)
+    const storedTextSize = localStorage.getItem(`panel_location_text_size_${unitId}`)
+    if (storedTextSize === 'sm' || storedTextSize === 'md' || storedTextSize === 'lg' || storedTextSize === 'xl') {
+      setLocationTextSize(storedTextSize)
+    } else {
+      setLocationTextSize('md')
+    }
+
+    // 4. Serviços / Setores
     try {
       const storedServices = localStorage.getItem(`panel_services_${unitId}`)
       if (storedServices) {
@@ -112,6 +124,7 @@ export default function PanelConfigPage({ params }: PageProps) {
     const url = new URL(`${window.location.origin}/painel/${unitId}`)
     url.searchParams.set('theme', theme)
     url.searchParams.set('layout', layout)
+    url.searchParams.set('textSize', locationTextSize)
     if (filterMode === 'SPECIFIC' && selectedServiceIds.length > 0) {
       url.searchParams.set('services', selectedServiceIds.join(','))
     }
@@ -132,6 +145,7 @@ export default function PanelConfigPage({ params }: PageProps) {
     try {
       localStorage.setItem(`panel_theme_${unitId}`, theme)
       localStorage.setItem(`panel_layout_${unitId}`, layout)
+      localStorage.setItem(`panel_location_text_size_${unitId}`, locationTextSize)
 
       if (filterMode === 'SPECIFIC' && selectedServiceIds.length > 0) {
         localStorage.setItem(`panel_services_${unitId}`, JSON.stringify(selectedServiceIds))
@@ -556,12 +570,231 @@ export default function PanelConfigPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* SEÇÃO 3: SERVIÇOS / SETORES DESTA TELA */}
+        {/* SEÇÃO 3: TAMANHO DOS TEXTOS DO LOCAL (SALA E GUICHÊ) */}
+        <section className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 md:p-8 space-y-4 shadow-sm">
+          <div>
+            <div className="flex items-center space-x-2">
+              <Type className="w-5 h-5 text-cyan-400" />
+              <h2 className="text-lg font-bold text-white">3. Tamanho dos Textos do Local (Sala e Guichê)</h2>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Defina a escala tipográfica do nome da sala, consultório e guichê para melhor legibilidade de acordo com a resolução e distância da tela.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+            {/* Opção SM: Pequeno / Compacto */}
+            <button
+              type="button"
+              onClick={() => setLocationTextSize('sm')}
+              className={`p-4 sm:p-5 rounded-2xl border text-left transition-all flex flex-col justify-between relative group ${
+                locationTextSize === 'sm'
+                  ? 'bg-slate-800/90 border-cyan-400 ring-2 ring-cyan-400/40 shadow-xl'
+                  : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-900/70'
+              }`}
+            >
+              <div className="flex items-start justify-between mb-3 w-full">
+                <div>
+                  <span className="font-bold text-white text-sm block">Pequeno / Compacto</span>
+                  <span className="text-[11px] text-slate-400">Telas menores / 720p</span>
+                </div>
+                <div
+                  className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ml-2 ${
+                    locationTextSize === 'sm'
+                      ? 'border-cyan-400 bg-cyan-500'
+                      : 'border-slate-600 bg-transparent'
+                  }`}
+                >
+                  {locationTextSize === 'sm' && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                </div>
+              </div>
+
+              {/* Prévia SM */}
+              <div className="w-full rounded-xl bg-slate-950 border border-slate-800 p-2.5 space-y-1.5 mb-3">
+                <div className="flex items-center space-x-1.5 text-purple-300">
+                  <DoorOpen className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-xs font-black truncate">Sala 09</span>
+                </div>
+                <div className="flex items-center justify-between text-cyan-300">
+                  <div className="flex items-center space-x-1.5">
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-xs font-black truncate">Guichê</span>
+                  </div>
+                  <span className="text-sm font-mono font-black">02</span>
+                </div>
+              </div>
+
+              <div>
+                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700 mb-1">
+                  720p / Laptops
+                </span>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  Ideal para monitores menores ou televisores 720p/HD para evitar que os textos ocupem muito espaço.
+                </p>
+              </div>
+            </button>
+
+            {/* Opção MD: Médio / Padrão */}
+            <button
+              type="button"
+              onClick={() => setLocationTextSize('md')}
+              className={`p-4 sm:p-5 rounded-2xl border text-left transition-all flex flex-col justify-between relative group ${
+                locationTextSize === 'md'
+                  ? 'bg-slate-800/90 border-cyan-400 ring-2 ring-cyan-400/40 shadow-xl'
+                  : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-900/70'
+              }`}
+            >
+              <div className="flex items-start justify-between mb-3 w-full">
+                <div>
+                  <span className="font-bold text-white text-sm block">Médio / Padrão</span>
+                  <span className="text-[11px] text-cyan-400 font-semibold">(Recomendado)</span>
+                </div>
+                <div
+                  className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ml-2 ${
+                    locationTextSize === 'md'
+                      ? 'border-cyan-400 bg-cyan-500'
+                      : 'border-slate-600 bg-transparent'
+                  }`}
+                >
+                  {locationTextSize === 'md' && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                </div>
+              </div>
+
+              {/* Prévia MD */}
+              <div className="w-full rounded-xl bg-slate-950 border border-slate-800 p-2.5 space-y-1.5 mb-3">
+                <div className="flex items-center space-x-1.5 text-purple-300">
+                  <DoorOpen className="w-4 h-4 shrink-0" />
+                  <span className="text-sm font-black truncate">Regulação TFD Sala 9</span>
+                </div>
+                <div className="flex items-center justify-between text-cyan-300">
+                  <div className="flex items-center space-x-1.5">
+                    <MapPin className="w-4 h-4 shrink-0" />
+                    <span className="text-sm font-black truncate">Guichê 02</span>
+                  </div>
+                  <span className="text-base font-mono font-black">02</span>
+                </div>
+              </div>
+
+              <div>
+                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-1">
+                  Padrão 1080p
+                </span>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  Equilíbrio perfeito de proporção e leitura para TVs Full HD padrão em salas de espera.
+                </p>
+              </div>
+            </button>
+
+            {/* Opção LG: Grande */}
+            <button
+              type="button"
+              onClick={() => setLocationTextSize('lg')}
+              className={`p-4 sm:p-5 rounded-2xl border text-left transition-all flex flex-col justify-between relative group ${
+                locationTextSize === 'lg'
+                  ? 'bg-slate-800/90 border-cyan-400 ring-2 ring-cyan-400/40 shadow-xl'
+                  : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-900/70'
+              }`}
+            >
+              <div className="flex items-start justify-between mb-3 w-full">
+                <div>
+                  <span className="font-bold text-white text-sm block">Grande</span>
+                  <span className="text-[11px] text-slate-400">Destaque ampliado</span>
+                </div>
+                <div
+                  className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ml-2 ${
+                    locationTextSize === 'lg'
+                      ? 'border-cyan-400 bg-cyan-500'
+                      : 'border-slate-600 bg-transparent'
+                  }`}
+                >
+                  {locationTextSize === 'lg' && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                </div>
+              </div>
+
+              {/* Prévia LG */}
+              <div className="w-full rounded-xl bg-slate-950 border border-slate-800 p-2.5 space-y-2 mb-3">
+                <div className="flex items-center space-x-2 text-purple-300">
+                  <DoorOpen className="w-4 h-4 shrink-0" />
+                  <span className="text-base font-black truncate">Regulação TFD Sala 9</span>
+                </div>
+                <div className="flex items-center justify-between text-cyan-300">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="w-4 h-4 shrink-0" />
+                    <span className="text-base font-black truncate">Guichê 02</span>
+                  </div>
+                  <span className="text-lg font-mono font-black">02</span>
+                </div>
+              </div>
+
+              <div>
+                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-1">
+                  Alta Visibilidade
+                </span>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  Recomendado para recepções médias e clínicas onde a TV fica a mais de 5 a 8 metros dos pacientes.
+                </p>
+              </div>
+            </button>
+
+            {/* Opção XL: Extra Grande */}
+            <button
+              type="button"
+              onClick={() => setLocationTextSize('xl')}
+              className={`p-4 sm:p-5 rounded-2xl border text-left transition-all flex flex-col justify-between relative group ${
+                locationTextSize === 'xl'
+                  ? 'bg-slate-800/90 border-cyan-400 ring-2 ring-cyan-400/40 shadow-xl'
+                  : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-900/70'
+              }`}
+            >
+              <div className="flex items-start justify-between mb-3 w-full">
+                <div>
+                  <span className="font-bold text-white text-sm block">Extra Grande</span>
+                  <span className="text-[11px] text-purple-400 font-semibold">Máximo Destaque</span>
+                </div>
+                <div
+                  className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ml-2 ${
+                    locationTextSize === 'xl'
+                      ? 'border-cyan-400 bg-cyan-500'
+                      : 'border-slate-600 bg-transparent'
+                  }`}
+                >
+                  {locationTextSize === 'xl' && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                </div>
+              </div>
+
+              {/* Prévia XL */}
+              <div className="w-full rounded-xl bg-slate-950 border border-slate-800 p-2.5 space-y-2 mb-3">
+                <div className="flex items-center space-x-2 text-purple-300">
+                  <DoorOpen className="w-5 h-5 shrink-0" />
+                  <span className="text-lg font-black truncate">Regulação TFD Sala 9</span>
+                </div>
+                <div className="flex items-center justify-between text-cyan-300">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="w-5 h-5 shrink-0" />
+                    <span className="text-lg font-black truncate">Guichê 02</span>
+                  </div>
+                  <span className="text-xl font-mono font-black">02</span>
+                </div>
+              </div>
+
+              <div>
+                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 mb-1">
+                  Acessibilidade / Grandes Salas
+                </span>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  Fontes gigantes para recepções amplas, corredores extensos e máxima acessibilidade a mais de 10 metros.
+                </p>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        {/* SEÇÃO 4: SERVIÇOS / SETORES DESTA TELA */}
         <section className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 md:p-8 space-y-4 shadow-sm">
           <div>
             <div className="flex items-center space-x-2">
               <Filter className="w-5 h-5 text-cyan-400" />
-              <h2 className="text-lg font-bold text-white">3. Serviços Chamados Nesta Tela (Setor)</h2>
+              <h2 className="text-lg font-bold text-white">4. Serviços Chamados Nesta Tela (Setor)</h2>
             </div>
             <p className="text-xs text-slate-400 mt-1">
               Especifique se esta TV chamará senhas de todos os serviços ou apenas de um setor específico.
@@ -665,13 +898,13 @@ export default function PanelConfigPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* SEÇÃO 4: LINK KIOSK / SMART TV */}
+        {/* SEÇÃO 5: LINK KIOSK / SMART TV */}
         <section className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 md:p-8 space-y-4 shadow-sm">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <div className="flex items-center space-x-2">
                 <Tv className="w-5 h-5 text-cyan-400" />
-                <h2 className="text-lg font-bold text-white">4. Link Direto para Smart TV / Kiosk Box</h2>
+                <h2 className="text-lg font-bold text-white">5. Link Direto para Smart TV / Kiosk Box</h2>
               </div>
               <p className="text-xs text-slate-400 mt-1">
                 Ao clicar em "Salvar e Ir ao Painel", as configurações acima são salvas neste navegador. Para configurar novas TVs sem precisar clicar, use este link:

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, use, useCallback } from 'react'
 import Link from 'next/link'
-import { FeaturedTicket, FeaturedTicketData } from '@/components/panel/FeaturedTicket'
+import { FeaturedTicket, FeaturedTicketData, LocationTextSize } from '@/components/panel/FeaturedTicket'
 import { TicketHistory, HistoryTicketItem } from '@/components/panel/TicketHistory'
 import { DigitalClock } from '@/components/panel/DigitalClock'
 import { speechManager } from '@/lib/speech'
@@ -86,9 +86,10 @@ export default function TVPanelPage({ params }: PanelPageProps) {
   const [unitLogoUrl, setUnitLogoUrl] = useState<string | null>(null)
   const [unitTimezone, setUnitTimezone] = useState<string>('America/Sao_Paulo')
 
-  // Configurações da tela: Tema (Padrão: Claro) e Layout (Padrão: classic)
+  // Configurações da tela: Tema (Padrão: Claro), Layout (Padrão: classic) e Escala dos Textos do Local
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [layout, setLayout] = useState<'classic' | 'widescreen' | 'compact'>('classic')
+  const [locationTextSize, setLocationTextSize] = useState<LocationTextSize>('md')
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
 
   // Função utilitária para calcular a chave do ciclo operacional corrente da unidade
@@ -459,6 +460,26 @@ export default function TVPanelPage({ params }: PanelPageProps) {
       selectedServiceIdsRef.current = initialFilter
       setSelectedServiceIds(initialFilter)
 
+      // 4. Tamanho dos textos do local (Sala e Guichê)
+      const urlTextSize = urlParams.get('textSize')
+      if (urlTextSize === 'sm' || urlTextSize === 'md' || urlTextSize === 'lg' || urlTextSize === 'xl') {
+        setLocationTextSize(urlTextSize)
+        try {
+          localStorage.setItem(`panel_location_text_size_${unitId}`, urlTextSize)
+        } catch (e) {}
+      } else {
+        try {
+          const storedSize = localStorage.getItem(`panel_location_text_size_${unitId}`)
+          if (storedSize === 'sm' || storedSize === 'md' || storedSize === 'lg' || storedSize === 'xl') {
+            setLocationTextSize(storedSize)
+          } else {
+            setLocationTextSize('md')
+          }
+        } catch (e) {
+          setLocationTextSize('md')
+        }
+      }
+
       // Carrega dados iniciais com o filtro ativo
       loadPanelData(initialFilter)
     }
@@ -555,7 +576,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
 
   return (
     <main
-      className={`min-h-screen flex flex-col p-5 md:p-8 justify-between relative transition-colors duration-500 overflow-hidden ${
+      className={`min-h-screen flex flex-col p-3 sm:p-5 md:p-6 lg:p-8 justify-between relative transition-colors duration-500 overflow-x-hidden ${
         isLight
           ? 'bg-gradient-to-b from-slate-100 via-slate-50 to-slate-200 text-slate-800'
           : 'bg-[#060a12] text-white'
@@ -579,37 +600,37 @@ export default function TVPanelPage({ params }: PanelPageProps) {
 
       {/* Barra Superior / Header */}
       <header
-        className={`flex items-center justify-between pb-5 mb-3 border-b transition-colors duration-300 z-10 relative ${
+        className={`flex items-center justify-between pb-3 sm:pb-4 md:pb-5 mb-2 sm:mb-3 border-b transition-colors duration-300 z-10 relative flex-wrap sm:flex-nowrap gap-3 ${
           isLight
-            ? 'border-slate-300/80 bg-white/80 backdrop-blur-md rounded-3xl p-5 shadow-sm'
-            : 'border-slate-800/80 bg-slate-900/50 backdrop-blur-md rounded-3xl p-5'
+            ? 'border-slate-300/80 bg-white/80 backdrop-blur-md rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 md:p-5 shadow-sm'
+            : 'border-slate-800/80 bg-slate-900/50 backdrop-blur-md rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 md:p-5'
         }`}
       >
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
           {unitLogoUrl ? (
             <img
               src={unitLogoUrl}
               alt="Brasão da Unidade"
-              className={`w-14 h-14 object-contain rounded-2xl p-1.5 border shadow-xs ${
+              className={`w-11 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain rounded-2xl p-1.5 border shadow-xs shrink-0 ${
                 isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/10'
               }`}
             />
           ) : (
             <div
-              className={`w-14 h-14 rounded-2xl border flex items-center justify-center shadow-xs ${
+              className={`w-11 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-2xl border flex items-center justify-center shadow-xs shrink-0 ${
                 isLight ? 'bg-cyan-100 border-cyan-300 text-cyan-700' : 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400'
               }`}
             >
-              <Radio className="w-7 h-7 animate-pulse" />
+              <Radio className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 animate-pulse" />
             </div>
           )}
-          <div>
-            <div className="flex items-center space-x-2.5">
-              <h1 className={`text-xl md:text-2xl font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+          <div className="min-w-0">
+            <div className="flex items-center space-x-2 sm:space-x-2.5 flex-wrap gap-1">
+              <h1 className={`text-lg sm:text-xl md:text-2xl font-black tracking-tight truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 {unitName}
               </h1>
               <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black tracking-wider ${
+                className={`inline-flex items-center px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black tracking-wider shrink-0 ${
                   isConnected
                     ? isLight
                       ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs'
@@ -617,25 +638,25 @@ export default function TVPanelPage({ params }: PanelPageProps) {
                     : 'bg-amber-500/20 text-amber-500 border border-amber-500/40 animate-pulse'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full mr-1.5 animate-ping bg-current" />
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 sm:mr-1.5 animate-ping bg-current" />
                 {isConnected ? 'AO VIVO' : 'CONECTANDO...'}
               </span>
 
               {/* Indicador de Setor / Filtro desta Tela */}
               {selectedServiceIds.length > 0 ? (
                 <span
-                  className={`hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
+                  className={`hidden sm:inline-flex items-center px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold border shrink-0 ${
                     isLight
                       ? 'bg-cyan-100 text-cyan-800 border-cyan-300'
                       : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                   }`}
                 >
-                  <Filter className="w-3.5 h-3.5 mr-1.5" />
-                  Setor ({selectedServiceIds.length} serviço{selectedServiceIds.length > 1 ? 's' : ''})
+                  <Filter className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
+                  Setor ({selectedServiceIds.length})
                 </span>
               ) : null}
             </div>
-            <p className={`text-xs font-medium tracking-wide mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+            <p className={`text-[11px] sm:text-xs font-medium tracking-wide mt-0.5 truncate ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
               {unitSubtitle || 'Painel de Atendimento em Tempo Real'}
             </p>
           </div>
@@ -649,7 +670,7 @@ export default function TVPanelPage({ params }: PanelPageProps) {
               {/* Botão de Áudio (Voz Ativa) */}
               <button
                 onClick={handleEnableAudio}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl text-sm font-black transition-all shadow-md ${
+                className={`flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black transition-all shadow-md ${
                   audioEnabled
                     ? isLight
                       ? 'bg-cyan-100 text-cyan-900 border border-cyan-300'
@@ -658,35 +679,35 @@ export default function TVPanelPage({ params }: PanelPageProps) {
                 }`}
                 title={audioEnabled ? 'Áudio ativado' : 'Clique para ativar a chamada por voz'}
               >
-                {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                {audioEnabled ? <Volume2 className="w-4 h-4 shrink-0" /> : <VolumeX className="w-4 h-4 shrink-0" />}
                 <span className="hidden md:inline">{audioEnabled ? 'Voz Ativa' : 'Ativar Voz'}</span>
               </button>
 
               {/* Botão Configurações */}
               <Link
                 href={`/painel/${unitId}/config`}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all border ${
+                className={`flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all border ${
                   isLight
                     ? 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 shadow-xs hover:border-cyan-400'
                     : 'bg-slate-800/80 text-slate-200 hover:text-white border-slate-700/80 hover:bg-slate-700/60 hover:border-cyan-500/40 shadow-sm'
                 }`}
-                title="Configurações desta tela (Tema, Layout e Setores)"
+                title="Configurações desta tela (Tema, Layout, Tamanho de Texto e Setores)"
               >
-                <SlidersHorizontal className={`w-4 h-4 ${isLight ? 'text-cyan-600' : 'text-cyan-400'}`} />
-                <span className="hidden sm:inline">Configurações</span>
+                <SlidersHorizontal className={`w-4 h-4 shrink-0 ${isLight ? 'text-cyan-600' : 'text-cyan-400'}`} />
+                <span className="hidden md:inline">Configurações</span>
               </Link>
 
               {/* Botão Tela Cheia */}
               <button
                 onClick={toggleFullscreen}
-                className={`p-2.5 rounded-2xl border transition-all ${
+                className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border transition-all ${
                   isLight
                     ? 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-300 shadow-xs hover:border-cyan-400'
                     : 'bg-slate-800/80 text-slate-300 hover:text-white border-slate-700/80 hover:border-cyan-500/40 shadow-sm'
                 }`}
-                title="Alternar Tela Cheia"
+                title="Alternar Tela Cheia (F11)"
               >
-                {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                {isFullscreen ? <Minimize className="w-4 h-4 sm:w-5 sm:h-5" /> : <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />}
               </button>
             </>
           )}
@@ -699,15 +720,27 @@ export default function TVPanelPage({ params }: PanelPageProps) {
       {/* REQUISITO 2: Área Central com os 3 Layouts Disponíveis */}
       {layout === 'widescreen' ? (
         /* LAYOUT 2: Widescreen Horizontal (Senha no Topo + Histórico em Grade Inferior) */
-        <section className="flex-1 flex flex-col gap-5 my-2">
-          <FeaturedTicket ticket={currentTicket} isFlashing={isFlashing} theme={theme} variant="widescreen" />
+        <section className="flex-1 flex flex-col gap-3 sm:gap-4 md:gap-5 my-1 sm:my-2">
+          <FeaturedTicket
+            ticket={currentTicket}
+            isFlashing={isFlashing}
+            theme={theme}
+            variant="widescreen"
+            locationTextSize={locationTextSize}
+          />
           <TicketHistory history={history} theme={theme} variant="widescreen" />
         </section>
       ) : layout === 'compact' ? (
         /* LAYOUT 3: Foco Dividido / Chamada Dupla */
-        <section className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 my-2 items-stretch">
+        <section className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 my-1 sm:my-2 items-stretch">
           <div className="lg:col-span-7 flex flex-col">
-            <FeaturedTicket ticket={currentTicket} isFlashing={isFlashing} theme={theme} variant="compact" />
+            <FeaturedTicket
+              ticket={currentTicket}
+              isFlashing={isFlashing}
+              theme={theme}
+              variant="compact"
+              locationTextSize={locationTextSize}
+            />
           </div>
           <div className="lg:col-span-5 flex flex-col">
             <TicketHistory history={history} theme={theme} variant="compact" />
@@ -715,24 +748,30 @@ export default function TVPanelPage({ params }: PanelPageProps) {
         </section>
       ) : (
         /* LAYOUT 1 (Padrão): Destaque Lateral Clássico */
-        <section className="flex-1 flex flex-col lg:flex-row gap-6 my-2">
-          <FeaturedTicket ticket={currentTicket} isFlashing={isFlashing} theme={theme} variant="classic" />
+        <section className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-6 my-1 sm:my-2">
+          <FeaturedTicket
+            ticket={currentTicket}
+            isFlashing={isFlashing}
+            theme={theme}
+            variant="classic"
+            locationTextSize={locationTextSize}
+          />
           <TicketHistory history={history} theme={theme} variant="classic" />
         </section>
       )}
 
       {/* Rodapé Institucional / Marquee Informativo */}
       <footer
-        className={`mt-4 pt-4 border-t flex items-center justify-between text-xs transition-colors duration-300 ${
+        className={`mt-2 sm:mt-4 pt-2.5 sm:pt-4 border-t flex items-center justify-between text-[11px] sm:text-xs transition-colors duration-300 ${
           isLight ? 'border-slate-300/80 text-slate-600' : 'border-slate-800/60 text-slate-400'
         }`}
       >
-        <div className="flex items-center space-x-2">
-          <ShieldCheck className={`w-4 h-4 ${isLight ? 'text-cyan-600' : 'text-cyan-400'}`} />
-          <span>Atendimento conforme Lei Federal nº 10.048/2000 (Prioridades)</span>
+        <div className="flex items-center space-x-1.5 sm:space-x-2">
+          <ShieldCheck className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${isLight ? 'text-cyan-600' : 'text-cyan-400'}`} />
+          <span className="truncate">Atendimento conforme Lei Federal nº 10.048/2000 (Prioridades)</span>
         </div>
 
-        <div className={`hidden md:block overflow-hidden max-w-xl text-right ${isLight ? 'text-slate-600' : 'text-slate-500'}`}>
+        <div className={`hidden md:block overflow-hidden max-w-xl text-right shrink-0 ${isLight ? 'text-slate-600' : 'text-slate-500'}`}>
           <span>Ao ouvir sua senha, dirija-se com seus documentos ao guichê informado.</span>
         </div>
       </footer>
