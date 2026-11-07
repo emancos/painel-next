@@ -756,12 +756,25 @@ export function AdminReportsTab({
                     {/* Atendente */}
                     <td className="py-3 px-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 text-white flex items-center justify-center text-[10px] font-black shadow-xs shrink-0">
+                        <div
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shadow-xs shrink-0 ${
+                            t.isServiceAttendantFallback
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
+                              : 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white'
+                          }`}
+                        >
                           {t.attendantName ? t.attendantName.slice(0, 2).toUpperCase() : '--'}
                         </div>
-                        <span className="text-slate-800 dark:text-slate-200 text-xs font-semibold truncate max-w-[120px]">
-                          {t.attendantName || 'Não atribuído'}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-slate-800 dark:text-slate-200 text-xs font-semibold truncate max-w-[120px]">
+                            {t.attendantName || 'Não atribuído'}
+                          </span>
+                          {t.isServiceAttendantFallback && (
+                            <span className="text-[9px] text-amber-700 dark:text-amber-400 font-medium">
+                              Titular do serviço
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
 
@@ -856,6 +869,11 @@ export function AdminReportsTab({
                     <span className="text-[10px] text-slate-500 block">Atendente:</span>
                     <span className="text-slate-800 dark:text-slate-200 font-semibold">
                       {t.attendantName || '--'}
+                      {t.isServiceAttendantFallback && (
+                        <span className="text-[10px] text-amber-700 dark:text-amber-400 font-medium ml-1">
+                          (Titular)
+                        </span>
+                      )}
                     </span>
                   </div>
                   <div>
@@ -1103,7 +1121,7 @@ export function AdminReportsTab({
                     <td className="py-1 px-2">{t.customerName || '--'}</td>
                     <td className="py-1 px-2">{t.serviceName}</td>
                     <td className="py-1 px-2">{t.roomName || 'Geral'}</td>
-                    <td className="py-1 px-2">{t.attendantName || '--'}</td>
+                    <td className="py-1 px-2">{t.attendantName ? `${t.attendantName}${t.isServiceAttendantFallback ? ' (Titular)' : ''}` : '--'}</td>
                     <td className="py-1 px-2 font-mono">{formatTimeOnly(t.createdAt)}</td>
                     <td className="py-1 px-2 font-mono">{formatDuration(t.waitTimeSeconds)}</td>
                     <td className="py-1 px-2 font-mono">{formatDuration(t.serviceTimeSeconds)}</td>
