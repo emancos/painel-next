@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db'
 import { units, floors, rooms, locations, users, userUnits, services, dailyCounters, tickets, ticketsHistory, priorities } from '@/lib/db/schema'
-import { eq, asc, desc, and, gte, lte, or, inArray, sql } from 'drizzle-orm'
+import { eq, asc, desc, and, gte, lte, or, inArray, sql, isNull } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { publishPanelEvent } from '@/lib/redis'
 
@@ -785,6 +785,7 @@ export interface TicketReportItem {
   priorityColor: string
   userId: string | null
   attendantName: string | null
+  isServiceAttendantFallback?: boolean
   unitId: string
   unitName: string
   observation?: string | null
@@ -830,7 +831,14 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
   if (filters.serviceId && filters.serviceId !== 'ALL') activeConditions.push(eq(tickets.serviceId, filters.serviceId))
   if (filters.status && filters.status !== 'ALL') activeConditions.push(eq(tickets.status, filters.status))
   if (filters.priorityId && filters.priorityId > 0) activeConditions.push(eq(tickets.priorityId, filters.priorityId))
-  if (filters.userId && filters.userId !== 'ALL') activeConditions.push(eq(tickets.userId, filters.userId))
+  if (filters.userId && filters.userId !== 'ALL') {
+    activeConditions.push(
+      or(
+        eq(tickets.userId, filters.userId),
+        and(isNull(tickets.userId), eq(services.userId, filters.userId))
+      )
+    )
+  }
 
   // 2. Condições de Filtro para Tabela ticketsHistory
   const historyConditions: any[] = []
@@ -840,7 +848,14 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
   if (filters.serviceId && filters.serviceId !== 'ALL') historyConditions.push(eq(ticketsHistory.serviceId, filters.serviceId))
   if (filters.status && filters.status !== 'ALL') historyConditions.push(eq(ticketsHistory.status, filters.status))
   if (filters.priorityId && filters.priorityId > 0) historyConditions.push(eq(ticketsHistory.priorityId, filters.priorityId))
-  if (filters.userId && filters.userId !== 'ALL') historyConditions.push(eq(ticketsHistory.userId, filters.userId))
+  if (filters.userId && filters.userId !== 'ALL') {
+    historyConditions.push(
+      or(
+        eq(ticketsHistory.userId, filters.userId),
+        and(isNull(ticketsHistory.userId), eq(services.userId, filters.userId))
+      )
+    )
+  }
 
   // Execução concorrente das duas buscas
   const [activeResults, historyResults] = await Promise.all([
@@ -864,6 +879,7 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
         serviceId: tickets.serviceId,
         serviceName: services.name,
         serviceRoomId: services.roomId,
+        serviceUserId: services.userId,
         priorityId: tickets.priorityId,
         priorityName: priorities.name,
         priorityColor: priorities.colorHex,
@@ -905,6 +921,7 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
         serviceId: ticketsHistory.serviceId,
         serviceName: services.name,
         serviceRoomId: services.roomId,
+        serviceUserId: services.userId,
         priorityId: ticketsHistory.priorityId,
         priorityName: priorities.name,
         priorityColor: priorities.colorHex,
@@ -924,9 +941,13 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
       .where(historyConditions.length > 0 ? and(...historyConditions) : undefined),
   ])
 
-  // Busca mapa de salas para resolver o nome da sala (caso vinculada ao serviço ou local)
-  const allRooms = await db.select({ id: rooms.id, name: rooms.name, number: rooms.number }).from(rooms)
+  // Busca mapa de salas e usuários para resolver nomes em cascata (serviço ou local)
+  const [allRooms, allUsers] = await Promise.all([
+    db.select({ id: rooms.id, name: rooms.name, number: rooms.number }).from(rooms),
+    db.select({ id: users.id, name: users.name }).from(users),
+  ])
   const roomMap = new Map(allRooms.map((r) => [r.id, `${r.name}${r.number ? ` (${r.number})` : ''}`]))
+  const userMap = new Map(allUsers.map((u) => [u.id, u.name]))
 
   // Unifica e calcula tempos
   const itemsMap = new Map<string, TicketReportItem>()
@@ -935,6 +956,11 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
   for (const row of historyResults) {
     const effectiveRoomId = row.serviceRoomId || row.locationRoomId || null
     const roomName = effectiveRoomId ? roomMap.get(effectiveRoomId) || null : null
+
+    const hasDirectAttendant = !!row.attendantName
+    const fallbackAttendantName = !hasDirectAttendant && row.serviceUserId ? userMap.get(row.serviceUserId) || null : null
+    const effectiveAttendantName = row.attendantName || fallbackAttendantName
+    const isServiceAttendantFallback = !hasDirectAttendant && !!fallbackAttendantName
 
     const wait = row.waitTimeSeconds !== null && row.waitTimeSeconds !== undefined
       ? row.waitTimeSeconds
@@ -980,8 +1006,9 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
       priorityId: row.priorityId,
       priorityName: row.priorityName,
       priorityColor: row.priorityColor,
-      userId: row.userId,
-      attendantName: row.attendantName,
+      userId: row.userId || (isServiceAttendantFallback ? row.serviceUserId : null),
+      attendantName: effectiveAttendantName,
+      isServiceAttendantFallback,
       unitId: row.unitId,
       unitName: row.unitName,
       observation: (row.metadata as any)?.observation || null,
@@ -992,6 +1019,11 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
   for (const row of activeResults) {
     const effectiveRoomId = row.serviceRoomId || row.locationRoomId || null
     const roomName = effectiveRoomId ? roomMap.get(effectiveRoomId) || null : null
+
+    const hasDirectAttendant = !!row.attendantName
+    const fallbackAttendantName = !hasDirectAttendant && row.serviceUserId ? userMap.get(row.serviceUserId) || null : null
+    const effectiveAttendantName = row.attendantName || fallbackAttendantName
+    const isServiceAttendantFallback = !hasDirectAttendant && !!fallbackAttendantName
 
     const wait = row.calledAt && row.createdAt
       ? Math.max(0, Math.round((new Date(row.calledAt).getTime() - new Date(row.createdAt).getTime()) / 1000))
@@ -1041,8 +1073,9 @@ export async function getAdminTicketsReport(filters: TicketReportFilters = {}): 
       priorityId: row.priorityId,
       priorityName: row.priorityName,
       priorityColor: row.priorityColor,
-      userId: row.userId,
-      attendantName: row.attendantName,
+      userId: row.userId || (isServiceAttendantFallback ? row.serviceUserId : null),
+      attendantName: effectiveAttendantName,
+      isServiceAttendantFallback,
       unitId: row.unitId,
       unitName: row.unitName,
       observation: observationText,
